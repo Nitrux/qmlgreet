@@ -6,24 +6,20 @@ import QmlGreet 1.0
 ComboBox {
     id: control
 
-    implicitWidth: 200
-    implicitHeight: 40
+    implicitWidth: 240
+    implicitHeight: 36 // Slightly more compact height
 
+    // [MODIFIED] Main Box: Dark, No Border
     background: Rectangle {
         implicitWidth: control.width
         implicitHeight: control.height
         radius: Maui.Style.radiusV
         
-        color: {
-            if (control.pressed) return ColorScheme.buttonFocus
-            if (control.hovered) return ColorScheme.buttonHover
-            return ColorScheme.buttonBackground
-        }
-
-        border.width: (control.hovered || control.pressed) ? 1 : 0
-        border.color: ColorScheme.buttonFocus
-
-        Behavior on color { ColorAnimation { duration: 100 } }
+        // Matches Cinderward's dark input/header background
+        color: ColorScheme.viewBackground 
+        
+        // [FIX] Removed Cyan border entirely.
+        border.color: "transparent" 
     }
 
     contentItem: Item {
@@ -32,23 +28,24 @@ ComboBox {
 
         Label {
             anchors.fill: parent
-            anchors.leftMargin: Maui.Style.space.medium
-            anchors.rightMargin: Maui.Style.space.medium
+            anchors.leftMargin: 8 // Tighter text alignment
+            anchors.rightMargin: 8
             
             text: control.displayText
             font: control.font
             color: ColorScheme.buttonForeground
             verticalAlignment: Text.AlignVCenter
-            horizontalAlignment: Text.AlignHCenter
+            horizontalAlignment: Text.AlignLeft
             elide: Text.ElideRight
         }
     }
 
+    // [MODIFIED] Popup: Closer, Tighter, Darker
     popup: Popup {
-        y: control.height + 4 // [MODIFIED] Slight offset for "floating" look
+        y: control.height + 2 // [FIX] Closer to the bottom edge
         width: control.width
         implicitHeight: contentItem.implicitHeight
-        padding: 4 // [MODIFIED] Added padding around the list
+        padding: 2 // [FIX] Reduced outer padding
 
         contentItem: ListView {
             clip: true
@@ -59,17 +56,17 @@ ComboBox {
         }
 
         background: Rectangle {
-            color: ColorScheme.buttonBackground
-            border.color: ColorScheme.buttonFocus
+            color: ColorScheme.windowBackground // Deepest dark
+            border.color: Qt.rgba(1, 1, 1, 0.08) // Extremely subtle edge, NO Cyan
             border.width: 1
             radius: Maui.Style.radiusV
         }
     }
 
-    // [NEW] Custom Delegate to match Cinderward dropdown style
+    // [MODIFIED] List Item: Compact and Dimmer Highlight
     delegate: ItemDelegate {
-        width: control.width - 8 // Account for popup padding
-        height: 36 // Fixed comfortable height
+        width: control.width - 4 // Account for popup padding (2+2)
+        height: 32 // [FIX] Compact height
         
         contentItem: Label {
             text: model[control.textRole]
@@ -77,11 +74,16 @@ ComboBox {
             font: control.font
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
+            leftPadding: 6 // [FIX] Text closer to edge
         }
 
         background: Rectangle {
-            color: parent.hovered ? ColorScheme.buttonHover : "transparent"
+            // [FIX] Dimmer Highlight: Use opacity instead of solid color
+            color: ColorScheme.buttonBackground
+            opacity: (control.highlightedIndex === index || parent.hovered) ? 0.3 : 0
             radius: Maui.Style.radiusV
+            
+            Behavior on opacity { NumberAnimation { duration: 50 } }
         }
         
         highlighted: control.highlightedIndex === index

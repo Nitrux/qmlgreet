@@ -10,8 +10,8 @@ Rectangle {
     property string text: ""
     signal clicked()
 
-    implicitWidth: text !== "" ? (label.implicitWidth + Maui.Style.space.big * 2) : 40
-    implicitHeight: 40
+    implicitWidth: text !== "" ? (label.implicitWidth + Maui.Style.space.big * 2) : 48 // Wider click area
+    implicitHeight: 40 // Height stays consistent
 
     color: {
         if (!mouseArea.enabled) return "transparent"
@@ -30,9 +30,9 @@ Rectangle {
     Maui.Icon {
         anchors.centerIn: parent
         source: root.iconName
-        // [MODIFIED] Increased icon size to match Cinderward
-        width: 24 
-        height: 24
+        // [MODIFIED] Increased icon size to 32px for better visibility
+        width: 32
+        height: 32
         color: ColorScheme.buttonForeground
         visible: root.text === "" && root.iconName !== ""
     }

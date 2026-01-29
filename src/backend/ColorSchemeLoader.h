@@ -9,10 +9,12 @@ class ColorSchemeLoader : public QObject
 {
     Q_OBJECT
 
-    // Background image property
     Q_PROPERTY(QString backgroundImage READ backgroundImage NOTIFY backgroundImageChanged)
 
-    // Button color properties for QML
+    // [NEW] Added missing background properties
+    Q_PROPERTY(QColor viewBackground READ viewBackground NOTIFY colorsChanged)
+    Q_PROPERTY(QColor windowBackground READ windowBackground NOTIFY colorsChanged)
+
     Q_PROPERTY(QColor buttonBackground READ buttonBackground NOTIFY colorsChanged)
     Q_PROPERTY(QColor buttonForeground READ buttonForeground NOTIFY colorsChanged)
     Q_PROPERTY(QColor buttonHover READ buttonHover NOTIFY colorsChanged)
@@ -21,19 +23,19 @@ class ColorSchemeLoader : public QObject
 public:
     explicit ColorSchemeLoader(QObject *parent = nullptr);
 
-    // Invokable method to load a color scheme file and return a QPalette
     Q_INVOKABLE QPalette loadColorScheme(const QString &filePath);
 
-    // Getter for background image
     QString backgroundImage() const { return m_backgroundImage; }
 
-    // Getters for button colors
+    // [NEW] Getters
+    QColor viewBackground() const { return m_viewBackground; }
+    QColor windowBackground() const { return m_windowBackground; }
+
     QColor buttonBackground() const { return m_buttonBackground; }
     QColor buttonForeground() const { return m_buttonForeground; }
     QColor buttonHover() const { return m_buttonHover; }
     QColor buttonFocus() const { return m_buttonFocus; }
 
-    // Setter for background image
     void setBackgroundImage(const QString &path);
 
 signals:
@@ -42,6 +44,11 @@ signals:
 
 private:
     QString m_backgroundImage;
+    
+    // [NEW] Member variables
+    QColor m_viewBackground;
+    QColor m_windowBackground;
+    
     QColor m_buttonBackground;
     QColor m_buttonForeground;
     QColor m_buttonHover;
