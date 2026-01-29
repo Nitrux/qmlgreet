@@ -31,7 +31,6 @@ Window {
     Component.onCompleted: {
         console.log("=== QmlGreet Debug ===")
         console.log("Background image path:", ColorScheme.backgroundImage)
-        console.log("Background color:", ColorScheme.background)
         layerShell.activate()
         root.visible = true
     }
@@ -125,16 +124,18 @@ Window {
         z: 1
     }
 
-    // Top Bar (Clock & Session)
-    RowLayout {
+    // Top Bar (Clock & Session) - Responsive layout
+    ColumnLayout {
         anchors.top: parent.top
-        anchors.right: parent.right
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.margins: Maui.Style.space.big
-        spacing: Maui.Style.space.medium
+        spacing: Maui.Style.space.small
         z: 10
+        width: Math.min(parent.width - Maui.Style.space.big * 2, 600)
 
         Label {
             id: clock
+            Layout.alignment: Qt.AlignHCenter
             color: Maui.Theme.textColor
             font.pixelSize: Maui.Style.fontSizes.big
             font.bold: true
@@ -149,9 +150,10 @@ Window {
 
         ComboBox {
             id: sessionCombo
+            Layout.alignment: Qt.AlignHCenter
+            Layout.preferredWidth: Math.min(parent.width, 300)
             model: sessionModel
             textRole: "name"
-            implicitWidth: 200
         }
     }
 
@@ -159,7 +161,7 @@ Window {
     StackLayout {
         id: loginStack
         anchors.centerIn: parent
-        width: 400
+        width: Math.min(parent.width - Maui.Style.space.big * 2, 600)
         currentIndex: 0
         z: 10
 
@@ -169,61 +171,107 @@ Window {
 
             Maui.SectionHeader {
                 Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
                 text1: "Select User"
                 text2: "Choose your account to login"
             }
 
-            ListView {
-                id: userView
-                Layout.preferredWidth: 400
-                Layout.preferredHeight: 160
-                orientation: ListView.Horizontal
-                model: userModel
-                spacing: Maui.Style.space.big
-                clip: true
+            // User avatar container - centered
+            Item {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: Math.min(parent.width, 500)
+                Layout.preferredHeight: 220
 
-                delegate: Maui.ListBrowserDelegate {
-                    width: 100
-                    height: 140
+                ListView {
+                    id: userView
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width, contentWidth)
+                    height: 220
+                    orientation: ListView.Horizontal
+                    model: userModel
+                    spacing: Maui.Style.space.big
+                    clip: false
+                    interactive: contentWidth > width
 
-                    iconSource: "user-identity"
-                    iconSizeHint: Maui.Style.iconSizes.huge
-                    label1.text: realName
-                    label1.font.pixelSize: Maui.Style.fontSizes.small
+                    delegate: Item {
+                        width: 140
+                        height: 220
 
-                    isCurrentItem: ListView.isCurrentItem
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: Maui.Style.space.medium
 
-                    onClicked: {
-                        userView.currentIndex = index
-                        auth.login(username)
-                    }
+                            // Avatar container with circular highlight
+                            Rectangle {
+                                Layout.alignment: Qt.AlignHCenter
+                                width: 120
+                                height: 120
+                                radius: 60
+                                color: "transparent"
+                                border.color: ListView.isCurrentItem ? Maui.Theme.highlightColor : "transparent"
+                                border.width: 3
 
-                    // Custom avatar overlay (on top of the icon)
-                    Item {
-                        anchors.centerIn: parent
-                        anchors.verticalCenterOffset: -10
-                        width: Maui.Style.iconSizes.huge
-                        height: Maui.Style.iconSizes.huge
-                        z: 10
+                                // Base icon (hidden when avatar image is loaded)
+                                Maui.Icon {
+                                    anchors.centerIn: parent
+                                    width: 112
+                                    height: 112
+                                    source: "user-identity"
+                                    color: Maui.Theme.textColor
+                                    visible: !avatarImg.visible
+                                }
 
-                        Image {
-                            id: avatarImg
-                            anchors.fill: parent
-                            source: iconPath ? "file://" + iconPath : ""
-                            fillMode: Image.PreserveAspectCrop
-                            visible: false
-                            cache: false
-                        }
+                                // Custom avatar overlay (circular)
+                                Item {
+                                    anchors.centerIn: parent
+                                    width: 112
+                                    height: 112
 
-                        OpacityMask {
-                            anchors.fill: avatarImg
-                            source: avatarImg
-                            maskSource: Rectangle {
-                                width: Maui.Style.iconSizes.huge
-                                height: Maui.Style.iconSizes.huge
-                                radius: Maui.Style.iconSizes.huge / 2
+                                    Image {
+                                        id: avatarImg
+                                        anchors.fill: parent
+                                        source: iconPath ? "file://" + iconPath : ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        visible: false
+                                        cache: false
+                                    }
+
+                                    OpacityMask {
+                                        id: maskedAvatar
+                                        anchors.fill: avatarImg
+                                        source: avatarImg
+                                        maskSource: Rectangle {
+                                            width: 112
+                                            height: 112
+                                            radius: 56
+                                        }
+                                        visible: iconPath && avatarImg.status === Image.Ready
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        userView.currentIndex = index
+                                        auth.login(username)
+                                    }
+                                }
                             }
-                            visible: iconPath && avatarImg.status === Image.Ready
+
+                            // Username label below avatar
+                            Label {
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.preferredWidth: 130
+                                text: realName
+                                color: Maui.Theme.textColor
+                                font.pixelSize: Maui.Style.fontSizes.medium
+                                font.weight: Font.Medium
+                                horizontalAlignment: Text.AlignHCenter
+                                elide: Text.ElideRight
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                            }
                         }
                     }
                 }
@@ -268,9 +316,9 @@ Window {
                 horizontalAlignment: Text.AlignHCenter
             }
 
-            Button {
+            StyledButton {
                 Layout.alignment: Qt.AlignHCenter
-                text: "Cancel"
+                iconName: "go-previous"
 
                 onClicked: {
                     auth.cancel()
@@ -280,33 +328,39 @@ Window {
         }
     }
 
-    // Bottom Controls (Power buttons)
-    RowLayout {
+    // Bottom floating bar with power buttons
+    Rectangle {
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        anchors.margins: Maui.Style.space.big
-        spacing: Maui.Style.space.medium
+        anchors.bottomMargin: Maui.Style.space.small
+        width: buttonRow.width + (Maui.Style.space.medium * 2)
+        height: 56
+        color: Maui.Theme.backgroundColor
+        radius: Maui.Style.radiusV
         z: 10
 
-        Button {
-            text: "Sleep"
-            icon.name: "system-suspend"
-            visible: true
-            onClicked: power.suspend()
-        }
+        RowLayout {
+            id: buttonRow
+            anchors.centerIn: parent
+            spacing: Maui.Style.space.small
 
-        Button {
-            text: "Reboot"
-            icon.name: "system-reboot"
-            visible: power.canReboot()
-            onClicked: power.reboot()
-        }
+            StyledButton {
+                iconName: "system-suspend"
+                visible: true
+                onClicked: power.suspend()
+            }
 
-        Button {
-            text: "Shutdown"
-            icon.name: "system-shutdown"
-            visible: power.canPowerOff()
-            onClicked: power.powerOff()
+            StyledButton {
+                iconName: "system-reboot"
+                visible: power.canReboot()
+                onClicked: power.reboot()
+            }
+
+            StyledButton {
+                iconName: "system-shutdown"
+                visible: power.canPowerOff()
+                onClicked: power.powerOff()
+            }
         }
     }
 }

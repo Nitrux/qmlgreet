@@ -4,6 +4,8 @@
 #include <QSettings>
 #include <QFile>
 #include <QCommandLineParser>
+#include <QPalette>
+#include <QQuickStyle>
 #include "backend/AuthWrapper.h"
 #include "backend/SessionModel.h"
 #include "backend/UserModel.h"
@@ -13,6 +15,9 @@
 
 int main(int argc, char *argv[])
 {
+    // Set Qt Quick Controls style before creating QGuiApplication
+    QQuickStyle::setStyle("org.kde.desktop");
+
     QGuiApplication app(argc, argv);
     app.setApplicationName("qmlgreet");
     app.setApplicationVersion("1.0");
@@ -62,9 +67,12 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Load the color scheme
+    // Load the color scheme and get the palette
+    QPalette palette;
     if (QFile::exists(colorSchemePath)) {
-        colorScheme->loadColorScheme(colorSchemePath);
+        palette = colorScheme->loadColorScheme(colorSchemePath);
+        app.setPalette(palette);
+        qDebug() << "=== Application Palette Set ===";
     } else {
         qWarning() << "Color scheme not found at:" << colorSchemePath;
         qWarning() << "Using built-in defaults";
