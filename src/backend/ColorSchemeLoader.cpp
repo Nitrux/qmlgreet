@@ -4,6 +4,7 @@
 
 ColorSchemeLoader::ColorSchemeLoader(QObject *parent)
     : QObject(parent)
+    , m_backgroundImage("")
 {
     // Initialize with default Catppuccin Mocha colors as fallback
     m_background = QColor(30, 30, 46);           // Base
@@ -41,6 +42,15 @@ QColor ColorSchemeLoader::parseRgbString(const QString &rgb)
     }
 
     return QColor(r, g, b);
+}
+
+void ColorSchemeLoader::setBackgroundImage(const QString &path)
+{
+    if (m_backgroundImage != path) {
+        m_backgroundImage = path;
+        emit backgroundImageChanged();
+        qDebug() << "Background image set to:" << path;
+    }
 }
 
 bool ColorSchemeLoader::loadColorScheme(const QString &filePath)

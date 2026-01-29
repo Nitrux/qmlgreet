@@ -43,15 +43,23 @@ int main(int argc, char *argv[])
     // Load configuration file from command-line argument or default path
     QString configPath = parser.value(configOption);
     QString colorSchemePath = "/usr/share/color-schemes/CatppuccinMochaNitrux.colors";
+    QString backgroundImagePath;
+
+    qDebug() << "Reading config from:" << configPath;
 
     if (QFile::exists(configPath)) {
         QSettings config(configPath, QSettings::IniFormat);
         config.beginGroup("Appearance");
         colorSchemePath = config.value("ColorScheme", colorSchemePath).toString();
+        backgroundImagePath = config.value("BackgroundImage", "").toString();
         config.endGroup();
-    } else if (configPath != "/etc/qmlgreet/qmlgreet.conf") {
-        // Warn only if user explicitly specified a config file that doesn't exist
+
+        qDebug() << "BackgroundImage from config:" << backgroundImagePath;
+    } else {
         qWarning() << "Config file not found at:" << configPath;
+        if (configPath != "/etc/qmlgreet/qmlgreet.conf") {
+            qWarning() << "Using default config path";
+        }
     }
 
     // Load the color scheme
@@ -60,6 +68,15 @@ int main(int argc, char *argv[])
     } else {
         qWarning() << "Color scheme not found at:" << colorSchemePath;
         qWarning() << "Using built-in defaults";
+    }
+
+    // Set background image if specified and exists
+    if (!backgroundImagePath.isEmpty()) {
+        if (QFile::exists(backgroundImagePath)) {
+            colorScheme->setBackgroundImage(backgroundImagePath);
+        } else {
+            qWarning() << "Background image not found at:" << backgroundImagePath;
+        }
     }
 
     QQmlApplicationEngine engine;

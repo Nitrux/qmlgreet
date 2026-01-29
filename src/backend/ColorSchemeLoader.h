@@ -22,6 +22,7 @@ class ColorSchemeLoader : public QObject
     Q_PROPERTY(QColor positive READ positive NOTIFY colorsChanged)
     Q_PROPERTY(QColor negative READ negative NOTIFY colorsChanged)
     Q_PROPERTY(QColor warning READ warning NOTIFY colorsChanged)
+    Q_PROPERTY(QString backgroundImage READ backgroundImage NOTIFY backgroundImageChanged)
 
 public:
     explicit ColorSchemeLoader(QObject *parent = nullptr);
@@ -43,9 +44,14 @@ public:
     QColor positive() const { return m_positive; }
     QColor negative() const { return m_negative; }
     QColor warning() const { return m_warning; }
+    QString backgroundImage() const { return m_backgroundImage; }
+
+    // Setter for background image
+    void setBackgroundImage(const QString &path);
 
 signals:
     void colorsChanged();
+    void backgroundImageChanged();
 
 private:
     QColor parseRgbString(const QString &rgb);
@@ -64,6 +70,7 @@ private:
     QColor m_positive;
     QColor m_negative;
     QColor m_warning;
+    QString m_backgroundImage;
 };
 
 #endif // COLORSCHEMELOADER_H

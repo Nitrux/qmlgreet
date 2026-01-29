@@ -11,7 +11,7 @@ Window {
     height: 1080
     visible: false
     flags: Qt.FramelessWindowHint
-    color: Maui.Theme.backgroundColor
+    color: "transparent"
 
     // Layer Shell: Makes this window behave like a greeter
     LayerShell {
@@ -19,8 +19,19 @@ Window {
         window: root
     }
 
+    // Window Blur Effect
+    Maui.WindowBlur {
+        view: root
+        geometry: Qt.rect(0, 0, root.width, root.height)
+        windowRadius: 0
+        enabled: true
+    }
+
     // Show window after layer shell is activated to prevent flicker
     Component.onCompleted: {
+        console.log("=== QmlGreet Debug ===")
+        console.log("Background image path:", ColorScheme.backgroundImage)
+        console.log("Background color:", ColorScheme.background)
         layerShell.activate()
         root.visible = true
     }
@@ -52,19 +63,66 @@ Window {
     UserModel { id: userModel }
     SessionModel { id: sessionModel }
 
-    // Background gradient
+    // Background layer 1: Base color or image
     Rectangle {
         anchors.fill: parent
         color: Maui.Theme.backgroundColor
+        z: 0
 
+        // Background Image (if specified)
+        Image {
+            id: backgroundImage
+            anchors.fill: parent
+            source: (ColorScheme.backgroundImage && ColorScheme.backgroundImage !== "")
+                    ? "file://" + ColorScheme.backgroundImage
+                    : ""
+            fillMode: Image.PreserveAspectCrop
+            visible: false // Hidden because we show the blurred version
+            cache: false
+
+            Component.onCompleted: {
+                console.log("ColorScheme.backgroundImage:", ColorScheme.backgroundImage)
+                console.log("Background Image source:", source)
+            }
+
+            onStatusChanged: {
+                console.log("Background Image status changed to:", status, "(1=Loading, 2=Ready, 3=Error)")
+                if (status === Image.Error) {
+                    console.log("Error loading background image!")
+                }
+                if (status === Image.Ready) {
+                    console.log("Background image loaded successfully!")
+                }
+            }
+        }
+
+        // Blurred background image
+        FastBlur {
+            anchors.fill: parent
+            source: backgroundImage
+            radius: 64
+            visible: backgroundImage.status === Image.Ready
+            cached: true
+        }
+
+        // Gradient overlay (only if no background image)
         Rectangle {
             anchors.fill: parent
             opacity: 0.3
+            visible: backgroundImage.status !== Image.Ready
             gradient: Gradient {
                 GradientStop { position: 0.0; color: Qt.lighter(Maui.Theme.backgroundColor, 1.1) }
                 GradientStop { position: 1.0; color: Qt.darker(Maui.Theme.backgroundColor, 1.1) }
             }
         }
+    }
+
+    // Semi-transparent overlay for better contrast (always visible, on top of background)
+    Rectangle {
+        anchors.fill: parent
+        color: Maui.Theme.backgroundColor
+        opacity: 0.76
+        z: 1
     }
 
     // Top Bar (Clock & Session)
@@ -73,6 +131,7 @@ Window {
         anchors.right: parent.right
         anchors.margins: Maui.Style.space.big
         spacing: Maui.Style.space.medium
+        z: 10
 
         Label {
             id: clock
@@ -102,6 +161,7 @@ Window {
         anchors.centerIn: parent
         width: 400
         currentIndex: 0
+        z: 10
 
         // View 0: Select User
         ColumnLayout {
@@ -226,6 +286,7 @@ Window {
         anchors.right: parent.right
         anchors.margins: Maui.Style.space.big
         spacing: Maui.Style.space.medium
+        z: 10
 
         Button {
             text: "Sleep"
