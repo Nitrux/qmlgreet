@@ -1,6 +1,16 @@
-# qmlgreet
+# QMLGreet
 
 QML-based greeter for greetd for wlr-based compositors.
+
+## Features
+
+-
+
+### Runtime Requirements
+
+```
+qt6 (>= 6.8.2)
+```
 
 # Licensing
 
@@ -12,6 +22,6 @@ If you find problems with the contents of this repository, please create an issu
 
 ## Submitting a bug report
 
-Before submitting a bug, you should look at the [existing bug reports]([url](https://github.com/Nitrux/qmlgreeter/issues)) to verify that no one has reported the bug already.
+Before submitting a bug, you should look at the [existing bug reports]([url](https://github.com/Nitrux/qmlgreet/issues)) to verify that no one has reported the bug already.
 
 ©2026 Nitrux Latinoamericana S.C.
