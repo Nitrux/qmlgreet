@@ -13,13 +13,8 @@ Window {
     flags: Qt.FramelessWindowHint
     color: "transparent"
 
-    // Layer Shell: Makes this window behave like a greeter
-    LayerShell {
-        id: layerShell
-        window: root
-    }
+    LayerShell { id: layerShell; window: root }
 
-    // Window Blur Effect
     Maui.WindowBlur {
         view: root
         geometry: Qt.rect(0, 0, root.width, root.height)
@@ -27,87 +22,47 @@ Window {
         enabled: true
     }
 
-    // Show window after layer shell is activated to prevent flicker
     Component.onCompleted: {
-        console.log("=== QmlGreet Debug ===")
-        console.log("Background image path:", ColorScheme.backgroundImage)
         layerShell.activate()
         root.visible = true
     }
 
-    // Auth Wrapper: Handles talking to greetd
     AuthWrapper {
         id: auth
-
         onPromptChanged: {
             passwordField.text = ""
             passwordField.forceActiveFocus()
             loginStack.currentIndex = 1
         }
-
         onLoginSucceeded: {
             var cmd = sessionModel.execCommand(sessionCombo.currentIndex)
-            console.log("Authentication success. Launching:", cmd)
             auth.startSession(cmd)
         }
-
-        onErrorChanged: {
-            if (auth.error !== "") {
-                errorAnimation.start()
-            }
-        }
+        onErrorChanged: { if (auth.error !== "") errorAnimation.start() }
     }
 
     SystemPower { id: power }
     UserModel { id: userModel }
     SessionModel { id: sessionModel }
 
-    // Background layer 1: Base color or image
+    // Background Layers
     Rectangle {
         anchors.fill: parent
         color: Maui.Theme.backgroundColor
         z: 0
-
-        // Background Image (if specified)
         Image {
             id: backgroundImage
             anchors.fill: parent
-            source: (ColorScheme.backgroundImage && ColorScheme.backgroundImage !== "")
-                    ? "file://" + ColorScheme.backgroundImage
-                    : ""
+            source: (ColorScheme.backgroundImage && ColorScheme.backgroundImage !== "") ? "file://" + ColorScheme.backgroundImage : ""
             fillMode: Image.PreserveAspectCrop
-            visible: false // Hidden because we show the blurred version
-            cache: false
-
-            Component.onCompleted: {
-                console.log("ColorScheme.backgroundImage:", ColorScheme.backgroundImage)
-                console.log("Background Image source:", source)
-            }
-
-            onStatusChanged: {
-                console.log("Background Image status changed to:", status, "(1=Loading, 2=Ready, 3=Error)")
-                if (status === Image.Error) {
-                    console.log("Error loading background image!")
-                }
-                if (status === Image.Ready) {
-                    console.log("Background image loaded successfully!")
-                }
-            }
+            visible: false; cache: false
         }
-
-        // Blurred background image
         FastBlur {
-            anchors.fill: parent
-            source: backgroundImage
-            radius: 64
-            visible: backgroundImage.status === Image.Ready
-            cached: true
+            anchors.fill: parent; source: backgroundImage; radius: 64
+            visible: backgroundImage.status === Image.Ready; cached: true
         }
-
-        // Gradient overlay (only if no background image)
         Rectangle {
-            anchors.fill: parent
-            opacity: 0.3
+            anchors.fill: parent; opacity: 0.3
             visible: backgroundImage.status !== Image.Ready
             gradient: Gradient {
                 GradientStop { position: 0.0; color: Qt.lighter(Maui.Theme.backgroundColor, 1.1) }
@@ -115,16 +70,11 @@ Window {
             }
         }
     }
-
-    // Semi-transparent overlay for better contrast (always visible, on top of background)
     Rectangle {
-        anchors.fill: parent
-        color: Maui.Theme.backgroundColor
-        opacity: 0.76
-        z: 1
+        anchors.fill: parent; color: Maui.Theme.backgroundColor; opacity: 0.76; z: 1
     }
 
-    // Top Bar (Clock & Session) - Responsive layout
+    // Top Bar
     ColumnLayout {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
@@ -139,16 +89,13 @@ Window {
             color: Maui.Theme.textColor
             font.pixelSize: Maui.Style.fontSizes.big
             font.bold: true
-
             Timer {
-                interval: 1000
-                running: true
-                repeat: true
+                interval: 1000; running: true; repeat: true
                 onTriggered: clock.text = Qt.formatDateTime(new Date(), "hh:mm A - dddd, MMM d")
             }
         }
 
-        ComboBox {
+        StyledComboBox {
             id: sessionCombo
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: Math.min(parent.width, 300)
@@ -157,7 +104,7 @@ Window {
         }
     }
 
-    // Center Stage (Login Flow)
+    // Center Stage
     StackLayout {
         id: loginStack
         anchors.centerIn: parent
@@ -176,10 +123,9 @@ Window {
                 text2: "Choose your account to login"
             }
 
-            // User avatar container - centered
             Item {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: Math.min(parent.width, 500)
+                Layout.fillWidth: true 
                 Layout.preferredHeight: 220
 
                 ListView {
@@ -199,34 +145,36 @@ Window {
 
                         ColumnLayout {
                             anchors.centerIn: parent
+                            width: parent.width
                             spacing: Maui.Style.space.medium
 
-                            // Avatar container with circular highlight
+                            // Avatar Circle
                             Rectangle {
+                                id: avatarContainer
                                 Layout.alignment: Qt.AlignHCenter
                                 width: 120
                                 height: 120
                                 radius: 60
-                                color: "transparent"
-                                border.color: ListView.isCurrentItem ? Maui.Theme.highlightColor : "transparent"
+                                
+                                // [MODIFIED] Avatar Hover Effect
+                                color: avatarMouseArea.containsMouse ? ColorScheme.buttonBackground : "transparent"
+                                border.color: (ListView.isCurrentItem || avatarMouseArea.containsMouse) ? Maui.Theme.highlightColor : "transparent"
                                 border.width: 3
 
-                                // Base icon (hidden when avatar image is loaded)
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+
                                 Maui.Icon {
                                     anchors.centerIn: parent
-                                    width: 112
-                                    height: 112
+                                    width: 112; height: 112
                                     source: "user-identity"
                                     color: Maui.Theme.textColor
                                     visible: !avatarImg.visible
                                 }
 
-                                // Custom avatar overlay (circular)
                                 Item {
                                     anchors.centerIn: parent
-                                    width: 112
-                                    height: 112
-
+                                    width: 112; height: 112
                                     Image {
                                         id: avatarImg
                                         anchors.fill: parent
@@ -235,22 +183,18 @@ Window {
                                         visible: false
                                         cache: false
                                     }
-
                                     OpacityMask {
-                                        id: maskedAvatar
                                         anchors.fill: avatarImg
                                         source: avatarImg
-                                        maskSource: Rectangle {
-                                            width: 112
-                                            height: 112
-                                            radius: 56
-                                        }
+                                        maskSource: Rectangle { width: 112; height: 112; radius: 56 }
                                         visible: iconPath && avatarImg.status === Image.Ready
                                     }
                                 }
 
                                 MouseArea {
+                                    id: avatarMouseArea
                                     anchors.fill: parent
+                                    hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         userView.currentIndex = index
@@ -259,10 +203,9 @@ Window {
                                 }
                             }
 
-                            // Username label below avatar
                             Label {
+                                Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.preferredWidth: 130
                                 text: realName
                                 color: Maui.Theme.textColor
                                 font.pixelSize: Maui.Style.fontSizes.medium
@@ -278,27 +221,18 @@ Window {
             }
         }
 
-        // View 1: Password Entry
+        // View 1: Password
         ColumnLayout {
             spacing: Maui.Style.space.medium
-
             Maui.SectionHeader {
-                Layout.fillWidth: true
-                text1: auth.currentPrompt || "Password"
-                text2: "Enter your password to continue"
+                Layout.fillWidth: true; text1: auth.currentPrompt || "Password"; text2: "Enter your password to continue"
             }
-
             Maui.TextField {
                 id: passwordField
-                Layout.fillWidth: true
-                Layout.preferredHeight: Maui.Style.rowHeight
-
+                Layout.fillWidth: true; Layout.preferredHeight: Maui.Style.rowHeight
                 echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
                 placeholderText: "Enter password"
-
                 onAccepted: auth.respond(text)
-
-                // Shake animation on error
                 SequentialAnimation {
                     id: errorAnimation
                     NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 10; duration: 50 }
@@ -306,35 +240,25 @@ Window {
                     NumberAnimation { target: passwordField; property: "x"; to: passwordField.x; duration: 50 }
                 }
             }
-
             Label {
-                Layout.fillWidth: true
-                text: auth.error
-                color: Maui.Theme.negativeTextColor
-                visible: auth.error !== ""
-                font.pixelSize: Maui.Style.fontSizes.small
-                horizontalAlignment: Text.AlignHCenter
+                Layout.fillWidth: true; text: auth.error; color: Maui.Theme.negativeTextColor
+                visible: auth.error !== ""; font.pixelSize: Maui.Style.fontSizes.small; horizontalAlignment: Text.AlignHCenter
             }
-
             StyledButton {
-                Layout.alignment: Qt.AlignHCenter
-                iconName: "go-previous"
-
-                onClicked: {
-                    auth.cancel()
-                    loginStack.currentIndex = 0
-                }
+                Layout.alignment: Qt.AlignHCenter; text: "Cancel"
+                onClicked: { auth.cancel(); loginStack.currentIndex = 0 }
             }
         }
     }
 
-    // Bottom floating bar with power buttons
+    // Bottom Bar
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Maui.Style.space.small
+        anchors.bottomMargin: Maui.Style.space.small 
         width: buttonRow.width + (Maui.Style.space.medium * 2)
-        height: 56
+        // [MODIFIED] Reduced height to 48 to match Cinderward header
+        height: 48 
         color: Maui.Theme.backgroundColor
         radius: Maui.Style.radiusV
         z: 10
@@ -343,24 +267,10 @@ Window {
             id: buttonRow
             anchors.centerIn: parent
             spacing: Maui.Style.space.small
-
-            StyledButton {
-                iconName: "system-suspend"
-                visible: true
-                onClicked: power.suspend()
-            }
-
-            StyledButton {
-                iconName: "system-reboot"
-                visible: power.canReboot()
-                onClicked: power.reboot()
-            }
-
-            StyledButton {
-                iconName: "system-shutdown"
-                visible: power.canPowerOff()
-                onClicked: power.powerOff()
-            }
+            
+            StyledButton { iconName: "system-suspend"; visible: true; onClicked: power.suspend() }
+            StyledButton { iconName: "system-reboot"; visible: power.canReboot(); onClicked: power.reboot() }
+            StyledButton { iconName: "system-shutdown"; visible: power.canPowerOff(); onClicked: power.powerOff() }
         }
     }
 }
