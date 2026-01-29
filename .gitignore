@@ -6,4 +6,5 @@
 /.project
 *.db
 *.qmlc
-*build
+*build/
+*mauikit/
