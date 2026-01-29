@@ -1,6 +1,6 @@
 # QMLGreet
 
-QML-based greeter for greetd for wlr-based compositors.
+QML-based greeter for greetd and wlr-based compositors.
 
 ## Features
 
