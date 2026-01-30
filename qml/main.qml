@@ -22,19 +22,40 @@ Window {
         enabled: true
     }
 
+    // Session selection logic
+    function selectDefaultSession() {
+        if (sessionModel.rowCount() === 0) return;
+
+        // 1. Try to find the ConfigDefaultSession
+        if (ConfigDefaultSession !== "") {
+            for (var i = 0; i < sessionModel.rowCount(); i++) {
+                var name = sessionModel.data(sessionModel.index(i, 0), 257)
+                // Check exact match or substring
+                if (name === ConfigDefaultSession || name.indexOf(ConfigDefaultSession) !== -1) {
+                    sessionCombo.currentIndex = i
+                    return
+                }
+            }
+        }
+        
+        // 2. Fallback: If nothing selected yet, select index 0
+        if (sessionCombo.currentIndex < 0) {
+            sessionCombo.currentIndex = 0
+        }
+    }
+
     Component.onCompleted: {
         layerShell.activate()
         root.visible = true
         if (userModel.rowCount() > 0) userCombo.currentIndex = 0
-        if (ConfigDefaultSession !== "") {
-            for (var i = 0; i < sessionModel.rowCount(); i++) {
-                var name = sessionModel.data(sessionModel.index(i, 0), 257)
-                if (name === ConfigDefaultSession) {
-                    sessionCombo.currentIndex = i
-                    break
-                }
-            }
-        }
+        
+        selectDefaultSession()
+    }
+
+    Connections {
+        target: sessionModel
+        function onRowsInserted() { selectDefaultSession() }
+        function onModelReset() { selectDefaultSession() }
     }
 
     AuthWrapper {
@@ -45,8 +66,21 @@ Window {
             loginStack.currentIndex = 1
         }
         onLoginSucceeded: {
-            var cmd = sessionModel.execCommand(sessionCombo.currentIndex)
-            auth.startSession(cmd)
+            auth.error = ""
+
+            // Ensure a session is actually selected
+            if (sessionCombo.currentIndex < 0) {
+                selectDefaultSession()
+            }
+
+            var idx = sessionCombo.currentIndex
+            if (idx >= 0) {
+                var cmd = sessionModel.execCommand(idx)
+                auth.startSession(cmd)
+            } else {
+                // Only show error if we genuinely failed to pick a session
+                auth.error = "No session selected"
+            }
         }
         onErrorChanged: { if (auth.error !== "") errorAnimation.start() }
     }
@@ -143,6 +177,7 @@ Window {
             id: timeLabel
             Layout.alignment: Qt.AlignHCenter
             font.pixelSize: 155
+            color: Maui.Theme.textColor
             font.bold: true
             
             Timer {
@@ -159,6 +194,7 @@ Window {
             id: dateLabel
             Layout.alignment: Qt.AlignHCenter
             font.pixelSize: 25
+            color: Maui.Theme.textColor
             font.weight: Font.Light
         }
 
@@ -170,7 +206,7 @@ Window {
             Layout.alignment: Qt.AlignHCenter
             visible: battery.available
             text: battery.info
-            color: "white"
+            color: Maui.Theme.textColor
             font.weight: Font.Medium
             
             background: Rectangle {
@@ -314,9 +350,7 @@ Window {
         height: 60 
         
         color: Maui.Theme.backgroundColor
-        
         radius: 15
-        
         z: 10
 
         RowLayout {
