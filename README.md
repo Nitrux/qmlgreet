@@ -22,9 +22,9 @@ QMLGreet runs natively on Wayland compositors (such as Hyprland or Sway) using t
 - Session Management:
     * Automatic discovery of Wayland sessions from XDG data directories.
     * Filters out hidden sessions.
-    * Direct D-Bus integration with `logind` (`org.freedesktop.login1`).
+    * Direct D-Bus integration with `logind || elogind`.
     * Dynamically hides system actions unsupported by the host hardware.
-    * Native C++ battery monitor (reads directly from `/sys/class/power_supply`).
+    * Native battery monitor.
     * Displays battery percentage and charging status (only visible when a battery is detected).
 - Performance:
     * Optimized C++ backend.
