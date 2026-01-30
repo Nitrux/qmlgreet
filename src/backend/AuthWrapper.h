@@ -17,7 +17,7 @@ class AuthWrapper : public QObject
     // UI Properties
     Q_PROPERTY(QString currentPrompt READ currentPrompt NOTIFY promptChanged)
     Q_PROPERTY(bool isSecret READ isSecret NOTIFY promptChanged)
-    Q_PROPERTY(QString error READ error NOTIFY errorChanged)
+    Q_PROPERTY(QString error READ error WRITE setError NOTIFY errorChanged)
     Q_PROPERTY(bool processing READ processing NOTIFY processingChanged)
 
 public:
@@ -28,6 +28,14 @@ public:
     bool isSecret() const { return m_isSecret; }
     QString error() const { return m_error; }
     bool processing() const { return m_processing; }
+
+    // Property Setters
+    void setError(const QString &error) {
+        if (m_error != error) {
+            m_error = error;
+            emit errorChanged();
+        }
+    }
 
     /**
      * @brief Initiates the login process for a specific user.
