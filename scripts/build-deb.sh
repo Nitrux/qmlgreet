@@ -9,35 +9,41 @@
 set -e
 
 
-# -- Download Source.
+# -- Prepare source.
 
-SRC_DIR="$(mktemp -d)"
+SRC_DIR="$(pwd)"
 
-git clone --depth 1 --branch "$QMLGREET_BRANCH" https://github.com/Nitrux/qmlgreet.git "$SRC_DIR/qmlgreet-src"
+BUILD_WORK_DIR="$(mktemp -d)"
 
-cd "$SRC_DIR/qmlgreet-src"
+cp -r "$SRC_DIR"/* "$BUILD_WORK_DIR/"
+
+cd "$BUILD_WORK_DIR"
 
 
-# -- Configure Build.
+# -- Configure build.
 
 meson setup .build --prefix=/usr --buildtype=release -Dcpp_args='-march=x86-64-v3'
 
 
-# -- Compile Source.
+# -- Compile source.
 
 ninja -C .build -k 0 -j "$(nproc)"
 
 
-# -- Create a temporary DESTDIR.
+# -- Create a temporary DESTDIR for packaging.
 
 DESTDIR="$(pwd)/pkg"
-
 rm -rf "$DESTDIR"
 
 
-# -- Install to DESTDIR.
+# -- Install binary to DESTDIR.
 
 DESTDIR="$DESTDIR" ninja -C .build install
+
+
+# -- Install configuration file.
+
+install -Dm644 "qmlgreet.conf" "$DESTDIR/etc/qmlgreet/qmlgreet.conf"
 
 
 # -- Create DEBIAN control file.
@@ -45,13 +51,14 @@ DESTDIR="$DESTDIR" ninja -C .build install
 mkdir -p "$DESTDIR/DEBIAN"
 
 PKGNAME="greetd-qmlgreet"
+VERSION="${PACKAGE_VERSION:-0.0.1}"
 MAINTAINER="uri_herrera@nxos.org"
 ARCHITECTURE="$(dpkg --print-architecture)"
 DESCRIPTION="QML-based greeter for greetd and wlr-based compositors."
 
 cat > "$DESTDIR/DEBIAN/control" <<EOF
 Package: $PKGNAME
-Version: $PACKAGE_VERSION
+Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: $ARCHITECTURE
@@ -61,17 +68,19 @@ Depends: greetd, libqt6core5compat6, libqt6core6t64, libqt6dbus6, libqt6gui6, li
 EOF
 
 
-# -- Build the Debian package.
+echo "/etc/qmlgreet/qmlgreet.conf" > "$DESTDIR/DEBIAN/conffiles"
 
 cd "$(dirname "$DESTDIR")"
 
-dpkg-deb --build "$(basename "$DESTDIR")" "${PKGNAME}_${PACKAGE_VERSION}_${ARCHITECTURE}.deb"
+dpkg-deb --build "$(basename "$DESTDIR")" "${PKGNAME}_${VERSION}_${ARCHITECTURE}.deb"
 
 
 # -- Move .deb to ./build/ for CI consistency.
 
-mkdir -p "$GITHUB_WORKSPACE/build"
+TARGET_DIR="${GITHUB_WORKSPACE:-$SRC_DIR}/build"
 
-mv "${PKGNAME}_${PACKAGE_VERSION}_${ARCHITECTURE}.deb" "$GITHUB_WORKSPACE/build/"
+mkdir -p "$TARGET_DIR"
+
+mv "${PKGNAME}_${VERSION}_${ARCHITECTURE}.deb" "$TARGET_DIR/"
 
 echo "Debian package created: $(pwd)/build/${PKGNAME}_${PACKAGE_VERSION}_${ARCHITECTURE}.deb"
