@@ -4,6 +4,7 @@
 #include <QLocalSocket>
 #include <QJsonObject>
 #include <QByteArray>
+#include <QStringList>
 
 /**
  * @brief The bridge between QML and the greetd IPC socket.
@@ -70,6 +71,8 @@ private:
     void sendCommand(const QJsonObject &json);
     void processMessage(const QJsonObject &json);
     void reset();
+    
+    QStringList prepareEnv();
 
     // Mock Helpers
     void runMockLogin(const QString &username);

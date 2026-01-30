@@ -9,6 +9,9 @@
 #include <QTimer>
 #include <QProcess>
 #include <QCoreApplication>
+#include <QDir>
+#include <QSettings>
+#include <QDateTime>
 
 AuthWrapper::AuthWrapper(QObject *parent)
     : QObject(parent)
@@ -30,16 +33,21 @@ void AuthWrapper::login(const QString &username)
 
     if (socketPath.isEmpty()) {
         qWarning() << "AuthWrapper: No GREETD_SOCK environment variable found. Switching to MOCK MODE.";
-        qWarning() << "AuthWrapper: If running under greetd, ensure the greeter is launched correctly.";
         m_isMock = true;
         runMockLogin(username);
         return;
     }
 
+    if (m_socket->state() == QLocalSocket::ConnectedState) {
+        m_socket->disconnectFromServer();
+        if (m_socket->state() != QLocalSocket::UnconnectedState)
+            m_socket->waitForDisconnected(1000);
+    }
+
     if (m_socket->state() != QLocalSocket::ConnectedState) {
         qDebug() << "AuthWrapper: Connecting to socket:" << socketPath;
         m_socket->connectToServer(socketPath);
-        if (!m_socket->waitForConnected(3000)) {  // Increased timeout to 3 seconds
+        if (!m_socket->waitForConnected(3000)) { 
             m_error = "Could not connect to greetd socket: " + m_socket->errorString();
             qWarning() << "AuthWrapper: Connection failed:" << m_error;
             emit errorChanged();
@@ -47,34 +55,25 @@ void AuthWrapper::login(const QString &username)
             emit processingChanged();
             return;
         }
-        qDebug() << "AuthWrapper: Successfully connected to greetd socket";
     }
 
     QJsonObject request;
     request["type"] = "create_session";
     request["username"] = username;
-    qDebug() << "AuthWrapper: Sending create_session for user:" << username;
     sendCommand(request);
 }
 
 void AuthWrapper::respond(const QString &response)
 {
-    qDebug() << "AuthWrapper: respond() called";
-
     // Guard: Don't respond if already processing or no prompt is active
-    if (m_processing) {
-        qWarning() << "AuthWrapper: Cannot respond while already processing";
-        return;
-    }
+    if (m_processing) return;
 
     if (m_prompt.isEmpty()) {
-        qWarning() << "AuthWrapper: Cannot respond - no active prompt (session may have expired or been cancelled)";
-        m_error = "No active authentication prompt. Please try logging in again.";
+        m_error = "No active authentication prompt.";
         emit errorChanged();
         return;
     }
 
-    qDebug() << "AuthWrapper: Sending response to prompt:" << m_prompt;
     m_processing = true;
     emit processingChanged();
 
@@ -111,34 +110,70 @@ void AuthWrapper::startSession(const QString &cmd)
 
     if (m_isMock) {
         qDebug() << "Mock: Requesting launch of:" << cmd;
-        // Simulate a short delay before "launching"
         QTimer::singleShot(500, this, [this](){
-            qDebug() << "Mock: Session launched! (App would quit now)";
             QCoreApplication::quit();
         });
         return;
     }
 
-    QStringList args = QProcess::splitCommand(cmd);
-    
+    // Wrap the command to redirect output to a temp file for debugging
+    QString logPath = QString("/tmp/qmlgreet-session-%1.log")
+                      .arg(QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss"));
+    QString wrappedCmd = QString("%1 > %2 2>&1").arg(cmd, logPath);
+
     QJsonArray cmdArray;
-    for (const QString &arg : args) {
-        cmdArray.append(arg);
+    cmdArray.append("/bin/sh");
+    cmdArray.append("-c");
+    cmdArray.append(wrappedCmd);
+
+    // Load variables from /etc/environment so the session has a PATH, etc.
+    QJsonArray envArray;
+    QStringList envList = prepareEnv();
+    for(const QString &e : envList) {
+        envArray.append(e);
     }
 
-    // Protocol: { "type": "start_session", "cmd": ["/path/to/prog", "arg1", ...] }
     QJsonObject json;
     json["type"] = "start_session";
     json["cmd"] = cmdArray;
+    json["env"] = envArray; // Send the loaded environment
     
     sendCommand(json);
 }
 
+// Helper to load environment variables
+QStringList AuthWrapper::prepareEnv() {
+    QStringList env;
+    
+    // 1. Load from /etc/environment
+    QSettings envSett("/etc/environment", QSettings::IniFormat);
+    for (const QString &key : envSett.allKeys()) {
+        env << QString("%1=%2").arg(key, envSett.value(key).toString());
+    }
+
+    // 2. Load from /etc/environment.d/
+    QDir envDir("/etc/environment.d");
+    QFileInfoList infoList = envDir.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
+    for (const QFileInfo &info : infoList) {
+        QSettings s(info.filePath(), QSettings::IniFormat);
+        for (const QString &key : s.allKeys()) {
+             env << QString("%1=%2").arg(key, s.value(key).toString());
+        }
+    }
+
+    // 3. Set Wayland variables
+    env << "XDG_SESSION_TYPE=wayland";
+    
+    // 4. Pass through existing XDG_DATA_DIRS if set
+    if (qEnvironmentVariableIsSet("XDG_DATA_DIRS"))
+        env << "XDG_DATA_DIRS=" + qgetenv("XDG_DATA_DIRS");
+
+    return env;
+}
+
 void AuthWrapper::runMockLogin(const QString &username)
 {
-    // Simulate network delay of 500ms
     QTimer::singleShot(500, this, [this, username]() {
-        qDebug() << "Mock: Asking for password for" << username;
         m_prompt = "Mock Password (type 'fail' to error):";
         m_isSecret = true;
         m_processing = false;
@@ -150,18 +185,13 @@ void AuthWrapper::runMockLogin(const QString &username)
 
 void AuthWrapper::runMockResponse(const QString &response)
 {
-    // Simulate processing delay
     QTimer::singleShot(600, this, [this, response]() {
         if (response == "fail") {
-             qDebug() << "Mock: Authentication failed";
-             m_error = "Mock Error: Invalid credentials (you typed 'fail')";
+             m_error = "Mock Error: Invalid credentials";
              emit errorChanged();
-             
-             // Reset UI to allow retry
              m_processing = false;
              emit processingChanged();
         } else {
-             qDebug() << "Mock: Authentication successful";
              m_processing = false;
              emit processingChanged();
              emit loginSucceeded();
@@ -175,15 +205,16 @@ void AuthWrapper::sendCommand(const QJsonObject &json)
     QByteArray data = doc.toJson(QJsonDocument::Compact);
     quint32 len = data.size();
 
-    // Protocol: 4-byte native-endian length + JSON payload
     QByteArray packet;
     QDataStream stream(&packet, QIODevice::WriteOnly);
     stream.setByteOrder(QDataStream::ByteOrder(QSysInfo::ByteOrder));
     stream << len;
     packet.append(data);
     
-    m_socket->write(packet);
-    m_socket->flush();
+    if (m_socket->state() == QLocalSocket::ConnectedState) {
+        m_socket->write(packet);
+        m_socket->flush();
+    }
 }
 
 void AuthWrapper::onReadyRead()
@@ -191,7 +222,6 @@ void AuthWrapper::onReadyRead()
     m_buffer.append(m_socket->readAll());
 
     while (true) {
-        // We need at least 4 bytes to read the length
         if (m_expectedLength == 0) {
             if (m_buffer.size() < 4) return; 
 
@@ -201,7 +231,6 @@ void AuthWrapper::onReadyRead()
             m_buffer.remove(0, 4);
         }
 
-        // Do we have the full payload yet?
         if (m_buffer.size() < m_expectedLength) return; 
 
         QByteArray payload = m_buffer.left(m_expectedLength);
@@ -218,11 +247,9 @@ void AuthWrapper::onReadyRead()
 void AuthWrapper::processMessage(const QJsonObject &json)
 {
     QString type = json["type"].toString();
-    qDebug() << "AuthWrapper: Received message type:" << type;
 
     if (type == "success") {
-        qDebug() << "AuthWrapper: Authentication successful";
-        m_prompt = ""; // Clear the prompt on success
+        m_prompt = "";
         m_processing = false;
         emit processingChanged();
         emit loginSucceeded();
@@ -231,16 +258,14 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         QString msgType = json["auth_message_type"].toString();
         m_prompt = json["auth_message"].toString();
         m_isSecret = (msgType == "secret");
-        qDebug() << "AuthWrapper: Auth prompt:" << m_prompt << "(secret:" << m_isSecret << ")";
 
         m_processing = false;
         emit promptChanged();
         emit processingChanged();
     }
     else if (type == "error") {
-        m_prompt = ""; // Clear the prompt on error
+        m_prompt = "";
         m_error = json["description"].toString();
-        qDebug() << "AuthWrapper: Error:" << m_error;
         m_processing = false;
         emit errorChanged();
         emit processingChanged();
@@ -249,7 +274,7 @@ void AuthWrapper::processMessage(const QJsonObject &json)
 
 void AuthWrapper::onSocketError(QLocalSocket::LocalSocketError)
 {
-    if (m_isMock) return; // Ignore socket errors in mock mode
+    if (m_isMock) return;
 
     m_error = "Socket Error: " + m_socket->errorString();
     emit errorChanged();
@@ -266,8 +291,7 @@ void AuthWrapper::reset()
     m_processing = false;
     m_expectedLength = 0;
     m_buffer.clear();
-    m_isMock = false;
-    
+    // Keep mock state if it was mock
     emit promptChanged();
     emit processingChanged();
 }
