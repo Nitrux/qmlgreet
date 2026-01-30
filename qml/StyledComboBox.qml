@@ -7,83 +7,76 @@ ComboBox {
     id: control
 
     implicitWidth: 240
-    implicitHeight: 36 // Slightly more compact height
+    implicitHeight: 36
 
-    // [MODIFIED] Main Box: Dark, No Border
+    // 1. Closed Box
     background: Rectangle {
-        implicitWidth: control.width
-        implicitHeight: control.height
         radius: Maui.Style.radiusV
-        
-        // Matches Cinderward's dark input/header background
-        color: ColorScheme.viewBackground 
-        
-        // [FIX] Removed Cyan border entirely.
-        border.color: "transparent" 
+        color: ColorScheme.viewBackground
+        border.color: "transparent"
     }
 
-    contentItem: Item {
-        width: control.width
-        height: control.height
-
-        Label {
-            anchors.fill: parent
-            anchors.leftMargin: 8 // Tighter text alignment
-            anchors.rightMargin: 8
-            
-            text: control.displayText
-            font: control.font
-            color: ColorScheme.buttonForeground
-            verticalAlignment: Text.AlignVCenter
-            horizontalAlignment: Text.AlignLeft
-            elide: Text.ElideRight
-        }
+    contentItem: Label {
+        leftPadding: 8
+        rightPadding: 8
+        text: control.displayText
+        font: control.font
+        color: ColorScheme.buttonForeground
+        verticalAlignment: Text.AlignVCenter
+        horizontalAlignment: Text.AlignLeft
+        elide: Text.ElideRight
     }
 
-    // [MODIFIED] Popup: Closer, Tighter, Darker
+    // 2. Popup
     popup: Popup {
-        y: control.height + 2 // [FIX] Closer to the bottom edge
+        y: control.height + 4
         width: control.width
-        implicitHeight: contentItem.implicitHeight
-        padding: 2 // [FIX] Reduced outer padding
+        padding: 4 // Outer padding for the "floating" look
+
+        // Simple Math: 32px per item. Cap at 192px (6 items).
+        height: Math.min(control.count * 32, 192) + (padding * 2)
 
         contentItem: ListView {
             clip: true
-            implicitHeight: contentHeight
             model: control.popup.visible ? control.delegateModel : null
             currentIndex: control.highlightedIndex
             ScrollIndicator.vertical: ScrollIndicator { }
         }
 
         background: Rectangle {
-            color: ColorScheme.windowBackground // Deepest dark
-            border.color: Qt.rgba(1, 1, 1, 0.08) // Extremely subtle edge, NO Cyan
+            color: ColorScheme.windowBackground
+            border.color: Qt.rgba(1, 1, 1, 0.08)
             border.width: 1
             radius: Maui.Style.radiusV
         }
     }
 
-    // [MODIFIED] List Item: Compact and Dimmer Highlight
+    // 3. List Item
     delegate: ItemDelegate {
-        width: control.width - 4 // Account for popup padding (2+2)
-        height: 32 // [FIX] Compact height
+        width: control.width - 8 // Account for popup padding
+        height: 32
+        padding: 0
         
         contentItem: Label {
-            text: model[control.textRole]
+            // [FIX] If this row is the selected one, use the known-good displayText.
+            // Otherwise, look it up in the model as usual.
+            text: (index === control.currentIndex) ? control.displayText : model[control.textRole]
+            
             color: ColorScheme.buttonForeground
             font: control.font
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter
-            leftPadding: 6 // [FIX] Text closer to edge
+            leftPadding: 8
         }
 
         background: Rectangle {
-            // [FIX] Dimmer Highlight: Use opacity instead of solid color
-            color: ColorScheme.buttonBackground
-            opacity: (control.highlightedIndex === index || parent.hovered) ? 0.3 : 0
+            // [FIX] Add margins so the highlight "floats" inside the row
+            anchors.fill: parent
+            anchors.margins: 2 
             radius: Maui.Style.radiusV
             
-            Behavior on opacity { NumberAnimation { duration: 50 } }
+            color: ColorScheme.buttonBackground
+            opacity: (parent.highlighted || parent.hovered) ? 0.3 : 0.0
         }
         
         highlighted: control.highlightedIndex === index
