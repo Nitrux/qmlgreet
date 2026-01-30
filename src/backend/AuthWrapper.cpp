@@ -9,6 +9,9 @@
 #include <QTimer>
 #include <QProcess>
 #include <QCoreApplication>
+#include <QSettings>
+#include <QDir>
+#include <QFileInfo>
 
 AuthWrapper::AuthWrapper(QObject *parent)
     : QObject(parent)
@@ -115,18 +118,26 @@ void AuthWrapper::startSession(const QString &cmd)
         return;
     }
 
-    QStringList args = QProcess::splitCommand(cmd);
-    
+    // Build command array - pass the full command as a single string element
     QJsonArray cmdArray;
-    for (const QString &arg : args) {
-        cmdArray.append(arg);
+    cmdArray.append(cmd);
+
+    // Prepare environment variables
+    QStringList envList = prepareEnv();
+    QJsonArray envArray;
+    for (const QString &envVar : envList) {
+        envArray.append(envVar);
     }
 
-    // Protocol: { "type": "start_session", "cmd": ["/path/to/prog", "arg1", ...] }
+    // Protocol: { "type": "start_session", "cmd": ["command"], "env": ["VAR=value", ...] }
     QJsonObject json;
     json["type"] = "start_session";
     json["cmd"] = cmdArray;
-    
+
+    if (!envArray.isEmpty()) {
+        json["env"] = envArray;
+    }
+
     sendCommand(json);
 }
 
@@ -218,20 +229,49 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         m_processing = false;
         emit processingChanged();
         emit loginSucceeded();
-    } 
+    }
     else if (type == "auth_message") {
         QString msgType = json["auth_message_type"].toString();
         m_prompt = json["auth_message"].toString();
         m_isSecret = (msgType == "secret");
+
+        // Handle info and error message types
+        if (msgType == "info") {
+            qDebug() << "Auth info:" << m_prompt;
+            // Still allow continuation for info messages
+        }
+        else if (msgType == "error") {
+            qWarning() << "Auth error message:" << m_prompt;
+            m_error = m_prompt;
+            emit errorChanged();
+        }
+
         m_processing = false;
         emit promptChanged();
         emit processingChanged();
     }
     else if (type == "error") {
-        m_error = json["description"].toString();
+        QString errorType = json["error_type"].toString();
+        QString description = json["description"].toString();
+
+        if (errorType == "auth_error") {
+            m_error = "Authentication failed: " + description;
+        } else {
+            m_error = "Error: " + description;
+        }
+
+        qWarning() << "greetd error:" << errorType << "-" << description;
+
         m_processing = false;
         emit errorChanged();
         emit processingChanged();
+
+        // Cancel the session on error
+        if (m_socket->state() == QLocalSocket::ConnectedState) {
+            QJsonObject cancelJson;
+            cancelJson["type"] = "cancel_session";
+            sendCommand(cancelJson);
+        }
     }
 }
 
@@ -255,7 +295,32 @@ void AuthWrapper::reset()
     m_expectedLength = 0;
     m_buffer.clear();
     m_isMock = false;
-    
+
     emit promptChanged();
     emit processingChanged();
+}
+
+QStringList AuthWrapper::prepareEnv()
+{
+    QStringList env;
+
+    // Read from /etc/environment
+    QSettings envSett("/etc/environment", QSettings::IniFormat);
+    for (const QString &key : envSett.allKeys()) {
+        env << QString("%1=%2").arg(key).arg(envSett.value(key).toString());
+    }
+
+    // Read from /etc/environment.d/*.conf files
+    QDir envDir("/etc/environment.d");
+    if (envDir.exists()) {
+        QFileInfoList files = envDir.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
+        for (const QFileInfo &info : files) {
+            QSettings s(info.filePath(), QSettings::IniFormat);
+            for (const QString &key : s.allKeys()) {
+                env << QString("%1=%2").arg(key).arg(s.value(key).toString());
+            }
+        }
+    }
+
+    return env;
 }
