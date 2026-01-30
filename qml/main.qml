@@ -328,10 +328,68 @@ Window {
                     Layout.fillWidth: true; Layout.preferredHeight: Maui.Style.rowHeight
                     echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
                     placeholderText: "Enter password"
-                    onAccepted: auth.respond(text)
-                    
+                    enabled: !auth.processing
+                    onAccepted: {
+                        if (!auth.processing && text.length > 0) {
+                            auth.respond(text)
+                        }
+                    }
+
                     palette.highlight: Maui.Theme.highlightColor
                     palette.highlightedText: Maui.Theme.highlightedTextColor
+
+                    background: Rectangle {
+                        radius: Maui.Style.radiusV
+                        color: {
+                            if (passwordField.activeFocus) return ColorScheme.buttonBackground
+                            if (passwordFieldHover.containsMouse) return ColorScheme.buttonHover
+                            return ColorScheme.viewBackground
+                        }
+                        border.width: passwordField.activeFocus ? 1 : 1
+                        border.color: passwordField.activeFocus ? ColorScheme.buttonFocus : Qt.rgba(1, 1, 1, 0.08)
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on border.width { NumberAnimation { duration: 150 } }
+
+                        MouseArea {
+                            id: passwordFieldHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            propagateComposedEvents: true
+                            onPressed: mouse.accepted = false
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        function styleButton(obj) {
+                            if (!obj || !obj.children) return
+                            for (var i = 0; i < obj.children.length; i++) {
+                                var child = obj.children[i]
+                                var childStr = child.toString()
+
+                                if (childStr.indexOf("ToolButton") !== -1 ||
+                                    childStr.indexOf("Button") !== -1) {
+
+                                    child.flat = true
+                                    child.hoverEnabled = false
+
+                                    if (child.background) {
+                                        child.background.visible = false
+                                    }
+
+                                    child.background = Qt.createQmlObject(
+                                        'import QtQuick; Rectangle { color: "transparent"; border.width: 0 }',
+                                        child
+                                    )
+                                }
+
+                                styleButton(child)
+                            }
+                        }
+
+                        styleButton(passwordField)
+                    }
 
                     SequentialAnimation {
                         id: errorAnimation

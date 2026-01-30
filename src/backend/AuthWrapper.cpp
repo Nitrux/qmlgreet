@@ -52,6 +52,19 @@ void AuthWrapper::login(const QString &username)
 
 void AuthWrapper::respond(const QString &response)
 {
+    // Guard: Don't respond if already processing or no prompt is active
+    if (m_processing) {
+        qWarning() << "AuthWrapper: Cannot respond while already processing";
+        return;
+    }
+
+    if (m_prompt.isEmpty()) {
+        qWarning() << "AuthWrapper: Cannot respond - no active prompt (session may have expired or been cancelled)";
+        m_error = "No active authentication prompt. Please try logging in again.";
+        emit errorChanged();
+        return;
+    }
+
     m_processing = true;
     emit processingChanged();
 
@@ -62,7 +75,7 @@ void AuthWrapper::respond(const QString &response)
 
     QJsonObject json;
     json["type"] = "post_auth_message_response";
-    json["response"] = response; 
+    json["response"] = response;
     sendCommand(json);
 }
 
