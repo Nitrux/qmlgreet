@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
     // Default Configuration
     QString configPath = parser.value(configOption);
-    QString colorSchemePath = "/usr/share/color-schemes/Nitrux.colors";
+    QString colorSchemePath = "/usr/share/color-schemes/QMLGreetDefault.colors";
     QString backgroundImagePath;
     QString iconTheme = "Luv"; 
     QString fontName = "Noto Sans";
