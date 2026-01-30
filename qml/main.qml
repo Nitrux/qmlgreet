@@ -22,23 +22,33 @@ Window {
         enabled: true
     }
 
-    // Session selection logic
+    // Robust selection logic (Two-Pass)
     function selectDefaultSession() {
         if (sessionModel.rowCount() === 0) return;
 
-        // 1. Try to find the ConfigDefaultSession
         if (ConfigDefaultSession !== "") {
+            // PASS 1: Strict exact match (Priority)
             for (var i = 0; i < sessionModel.rowCount(); i++) {
                 var name = sessionModel.data(sessionModel.index(i, 0), 257)
-                // Check exact match or substring
-                if (name === ConfigDefaultSession || name.indexOf(ConfigDefaultSession) !== -1) {
+                if (name === ConfigDefaultSession) {
                     sessionCombo.currentIndex = i
+                    console.log("Selected Default Session (Exact):", name)
+                    return
+                }
+            }
+
+            // PASS 2: Fuzzy/partial match (Fallback)
+            for (var j = 0; j < sessionModel.rowCount(); j++) {
+                var partialName = sessionModel.data(sessionModel.index(j, 0), 257)
+                if (partialName.indexOf(ConfigDefaultSession) !== -1) {
+                    sessionCombo.currentIndex = j
+                    console.log("Selected Default Session (Partial):", partialName)
                     return
                 }
             }
         }
-        
-        // 2. Fallback: If nothing selected yet, select index 0
+
+        // Fallback: Select first item if nothing else worked
         if (sessionCombo.currentIndex < 0) {
             sessionCombo.currentIndex = 0
         }
@@ -68,7 +78,7 @@ Window {
         onLoginSucceeded: {
             auth.error = ""
 
-            // Ensure a session is actually selected
+            // Ensure valid selection before launch
             if (sessionCombo.currentIndex < 0) {
                 selectDefaultSession()
             }
@@ -76,9 +86,9 @@ Window {
             var idx = sessionCombo.currentIndex
             if (idx >= 0) {
                 var cmd = sessionModel.execCommand(idx)
+                console.log("Launching session:", cmd)
                 auth.startSession(cmd)
             } else {
-                // Only show error if we genuinely failed to pick a session
                 auth.error = "No session selected"
             }
         }
@@ -319,6 +329,9 @@ Window {
                     echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
                     placeholderText: "Enter password"
                     onAccepted: auth.respond(text)
+                    
+                    palette.highlight: Maui.Theme.highlightColor
+                    palette.highlightedText: Maui.Theme.highlightedTextColor
 
                     SequentialAnimation {
                         id: errorAnimation

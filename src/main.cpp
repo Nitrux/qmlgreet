@@ -58,6 +58,7 @@ int main(int argc, char *argv[])
     // Load Configuration
     if (QFile::exists(configPath)) {
         QSettings config(configPath, QSettings::IniFormat);
+
         config.beginGroup("Appearance");
         colorSchemePath = config.value("ColorScheme", colorSchemePath).toString();
         backgroundImagePath = config.value("BackgroundImage", "").toString();
@@ -65,9 +66,9 @@ int main(int argc, char *argv[])
         fontName = config.value("Font", fontName).toString();
         fontSize = config.value("FontSize", fontSize).toInt();
         config.endGroup();
-        config.beginGroup("General");
+
+        // Read DefaultSession from root level (QSettings doesn't recognize [General] group)
         defaultSession = config.value("DefaultSession", "").toString();
-        config.endGroup();
     }
 
     // Set font
