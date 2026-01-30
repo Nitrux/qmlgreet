@@ -118,9 +118,13 @@ void AuthWrapper::startSession(const QString &cmd)
         return;
     }
 
-    // Build command array - pass the full command as a single string element
+    // Split the command string into executable + args
+    // e.g. "dbus-run-session sway" becomes ["dbus-run-session", "sway"]
+    QStringList args = QProcess::splitCommand(cmd);
     QJsonArray cmdArray;
-    cmdArray.append(cmd);
+    for (const QString &arg : args) {
+        cmdArray.append(arg);
+    }
 
     // Prepare environment variables
     QStringList envList = prepareEnv();
@@ -129,7 +133,7 @@ void AuthWrapper::startSession(const QString &cmd)
         envArray.append(envVar);
     }
 
-    // Protocol: { "type": "start_session", "cmd": ["command"], "env": ["VAR=value", ...] }
+    // Protocol: { "type": "start_session", "cmd": ["prog", "arg1", ...], "env": ["VAR=value", ...] }
     QJsonObject json;
     json["type"] = "start_session";
     json["cmd"] = cmdArray;
@@ -304,13 +308,13 @@ QStringList AuthWrapper::prepareEnv()
 {
     QStringList env;
 
-    // Read from /etc/environment
+    // 1. Read from /etc/environment
     QSettings envSett("/etc/environment", QSettings::IniFormat);
     for (const QString &key : envSett.allKeys()) {
         env << QString("%1=%2").arg(key).arg(envSett.value(key).toString());
     }
 
-    // Read from /etc/environment.d/*.conf files
+    // 2. Read from /etc/environment.d/*.conf files
     QDir envDir("/etc/environment.d");
     if (envDir.exists()) {
         QFileInfoList files = envDir.entryInfoList(QDir::Files | QDir::Readable, QDir::Name);
@@ -321,6 +325,20 @@ QStringList AuthWrapper::prepareEnv()
             }
         }
     }
+
+    // 3. CRITICAL: Inherit vital variables from the current process
+    // greetd sets these up for us, and the session will fail without them
+    if (qEnvironmentVariableIsSet("PATH"))
+        env << "PATH=" + QString::fromLocal8Bit(qgetenv("PATH"));
+    if (qEnvironmentVariableIsSet("XDG_RUNTIME_DIR"))
+        env << "XDG_RUNTIME_DIR=" + QString::fromLocal8Bit(qgetenv("XDG_RUNTIME_DIR"));
+    if (qEnvironmentVariableIsSet("XDG_SEAT"))
+        env << "XDG_SEAT=" + QString::fromLocal8Bit(qgetenv("XDG_SEAT"));
+    if (qEnvironmentVariableIsSet("XDG_VTNR"))
+        env << "XDG_VTNR=" + QString::fromLocal8Bit(qgetenv("XDG_VTNR"));
+
+    // 4. Force Wayland session type (recommended for Nitrux/Maui)
+    env << "XDG_SESSION_TYPE=wayland";
 
     return env;
 }
