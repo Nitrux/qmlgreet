@@ -13,9 +13,9 @@ set -e
 
 SRC_DIR="$(mktemp -d)"
 
-git clone --depth 1 --branch "$QTGREET_BRANCH" https://gitlab.com/marcusbritanicus/QtGreet.git "$SRC_DIR/qtgreet-src"
+git clone --depth 1 --branch "$QMLGREET_BRANCH" https://gitlab.com/Nitrux/qmlgreet.git "$SRC_DIR/qmlgreet-src"
 
-cd "$SRC_DIR/qtgreet-src"
+cd "$SRC_DIR/qmlgreet-src"
 
 
 # -- Configure Build.
