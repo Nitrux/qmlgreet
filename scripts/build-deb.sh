@@ -20,7 +20,7 @@ cd "$SRC_DIR/qtgreet-src"
 
 # -- Configure Build.
 
-meson setup .build --prefix=/usr --buildtype=release -Dcpp_args='-mavx2'
+meson setup .build --prefix=/usr --buildtype=release -Dcpp_args='-march=x86-64-v3'
 
 
 # -- Compile Source.
