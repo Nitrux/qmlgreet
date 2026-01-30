@@ -133,7 +133,7 @@ Window {
         Label {
             id: timeLabel
             Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 150
+            font.pixelSize: 155
             font.bold: true
             
             Timer {
@@ -141,7 +141,7 @@ Window {
                 onTriggered: {
                     var d = new Date()
                     timeLabel.text = Qt.formatDateTime(d, "hh:mm")
-                    dateLabel.text = Qt.formatDateTime(d, "dddd, d MMMM yyyy")
+                    dateLabel.text = Qt.formatDateTime(d, "dddd, d MMMM yyyy").toLowerCase()
                 }
             }
         }
@@ -149,8 +149,8 @@ Window {
         Label {
             id: dateLabel
             Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 20
-            font.weight: Font.Medium
+            font.pixelSize: 25
+            font.weight: Font.Light
         }
 
         // Spacer between Date and Battery
@@ -193,9 +193,9 @@ Window {
 
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
-                    width: 130 
-                    height: 130
-                    radius: 65
+                    width: 150 
+                    height: 150
+                    radius: 75
                     color: "transparent"
                     border.color: mouseArea.containsMouse ? Maui.Theme.highlightColor : "transparent"
                     border.width: 3
@@ -206,7 +206,7 @@ Window {
 
                     Maui.Icon {
                         anchors.centerIn: parent
-                        width: 112; height: 112
+                        width: 128; height: 128
                         source: "user-identity"
                         color: Maui.Theme.textColor
                         visible: avatarImg.status !== Image.Ready
@@ -214,7 +214,7 @@ Window {
 
                     Item {
                         anchors.centerIn: parent
-                        width: 120; height: 120
+                        width: 138; height: 138
                         Image {
                             id: avatarImg
                             anchors.fill: parent
@@ -224,7 +224,7 @@ Window {
                         }
                         OpacityMask {
                             anchors.fill: avatarImg; source: avatarImg
-                            maskSource: Rectangle { width: 120; height: 120; radius: 60 }
+                            maskSource: Rectangle { width: 138; height: 138; radius: 69 }
                             visible: parent.parent.iconPath && avatarImg.status === Image.Ready
                         }
                     }
