@@ -45,7 +45,6 @@ Window {
     UserModel { id: userModel }
     SessionModel { id: sessionModel }
 
-    // Background Layers
     Rectangle {
         anchors.fill: parent
         color: Maui.Theme.backgroundColor
@@ -74,7 +73,6 @@ Window {
         anchors.fill: parent; color: Maui.Theme.backgroundColor; opacity: 0.76; z: 1
     }
 
-    // Top Bar
     ColumnLayout {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
@@ -104,7 +102,6 @@ Window {
         }
     }
 
-    // Center Stage
     StackLayout {
         id: loginStack
         anchors.centerIn: parent
@@ -156,7 +153,7 @@ Window {
                                 height: 120
                                 radius: 60
                                 
-                                // [MODIFIED] Avatar Hover Effect
+                                // Avatar Hover Effect
                                 color: avatarMouseArea.containsMouse ? ColorScheme.buttonBackground : "transparent"
                                 border.color: (ListView.isCurrentItem || avatarMouseArea.containsMouse) ? Maui.Theme.highlightColor : "transparent"
                                 border.width: 3
@@ -257,7 +254,6 @@ Window {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Maui.Style.space.small 
         width: buttonRow.width + (Maui.Style.space.medium * 2)
-        // [MODIFIED] Reduced height to 48 to match Cinderward header
         height: 48 
         color: Maui.Theme.backgroundColor
         radius: Maui.Style.radiusV

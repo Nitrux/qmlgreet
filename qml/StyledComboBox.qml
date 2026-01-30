@@ -9,7 +9,6 @@ ComboBox {
     implicitWidth: 240
     implicitHeight: 36
 
-    // 1. Closed Box
     background: Rectangle {
         radius: Maui.Style.radiusV
         color: ColorScheme.viewBackground
@@ -27,13 +26,11 @@ ComboBox {
         elide: Text.ElideRight
     }
 
-    // 2. Popup
     popup: Popup {
         y: control.height + 4
         width: control.width
-        padding: 4 // Outer padding for the "floating" look
+        padding: 4
 
-        // Simple Math: 32px per item. Cap at 192px (6 items).
         height: Math.min(control.count * 32, 192) + (padding * 2)
 
         contentItem: ListView {
@@ -51,15 +48,12 @@ ComboBox {
         }
     }
 
-    // 3. List Item
     delegate: ItemDelegate {
-        width: control.width - 8 // Account for popup padding
+        width: control.width - 8
         height: 32
         padding: 0
         
         contentItem: Label {
-            // [FIX] If this row is the selected one, use the known-good displayText.
-            // Otherwise, look it up in the model as usual.
             text: (index === control.currentIndex) ? control.displayText : model[control.textRole]
             
             color: ColorScheme.buttonForeground
@@ -70,7 +64,6 @@ ComboBox {
         }
 
         background: Rectangle {
-            // [FIX] Add margins so the highlight "floats" inside the row
             anchors.fill: parent
             anchors.margins: 2 
             radius: Maui.Style.radiusV

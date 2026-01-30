@@ -11,7 +11,7 @@ Rectangle {
     signal clicked()
 
     implicitWidth: text !== "" ? (label.implicitWidth + Maui.Style.space.big * 2) : 48 // Wider click area
-    implicitHeight: 40 // Height stays consistent
+    implicitHeight: 40
 
     color: {
         if (!mouseArea.enabled) return "transparent"
@@ -30,7 +30,6 @@ Rectangle {
     Maui.Icon {
         anchors.centerIn: parent
         source: root.iconName
-        // [MODIFIED] Increased icon size to 32px for better visibility
         width: 32
         height: 32
         color: ColorScheme.buttonForeground

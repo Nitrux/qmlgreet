@@ -63,7 +63,7 @@ void LayerShell::initWayland()
         return;
     }
 
-    // 2. Get the Registry manually to find the Layer Shell global
+    // Get the Registry manually to find the Layer Shell global
     // We create our own registry wrapper to avoid interfering with Qt's
     m_wlRegistry = wl_display_get_registry(m_wlDisplay);
     wl_registry_add_listener(m_wlRegistry, &registry_listener, this);

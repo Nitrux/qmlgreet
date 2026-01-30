@@ -11,7 +11,6 @@ class ColorSchemeLoader : public QObject
 
     Q_PROPERTY(QString backgroundImage READ backgroundImage NOTIFY backgroundImageChanged)
 
-    // [NEW] Added missing background properties
     Q_PROPERTY(QColor viewBackground READ viewBackground NOTIFY colorsChanged)
     Q_PROPERTY(QColor windowBackground READ windowBackground NOTIFY colorsChanged)
 
@@ -27,7 +26,6 @@ public:
 
     QString backgroundImage() const { return m_backgroundImage; }
 
-    // [NEW] Getters
     QColor viewBackground() const { return m_viewBackground; }
     QColor windowBackground() const { return m_windowBackground; }
 
@@ -45,7 +43,6 @@ signals:
 private:
     QString m_backgroundImage;
     
-    // [NEW] Member variables
     QColor m_viewBackground;
     QColor m_windowBackground;
     

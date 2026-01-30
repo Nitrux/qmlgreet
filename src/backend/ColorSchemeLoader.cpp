@@ -69,7 +69,7 @@ QPalette ColorSchemeLoader::loadColorScheme(const QString &filePath)
         return QColor(0, 0, 0);
     };
 
-    // [MODIFIED] Store to member variables so QML can see them
+    // Store to member variables so QML can see them
     m_viewBackground = readColor("Colors:View", "BackgroundNormal");
     m_windowBackground = readColor("Colors:Window", "BackgroundNormal");
     QColor windowForeground = readColor("Colors:Window", "ForegroundNormal");
