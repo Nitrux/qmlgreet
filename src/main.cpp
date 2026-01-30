@@ -6,8 +6,9 @@
 #include <QCommandLineParser>
 #include <QPalette>
 #include <QQuickStyle>
-#include <QIcon> 
+#include <QIcon>
 #include <QFont>
+#include <syslog.h>
 #include "backend/AuthWrapper.h"
 #include "backend/SessionModel.h"
 #include "backend/UserModel.h"
@@ -16,8 +17,48 @@
 #include "backend/ColorSchemeLoader.h"
 #include "backend/SystemBattery.h"
 
+// Custom message handler to redirect Qt debug output to syslog
+void syslogMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QByteArray localMsg = msg.toLocal8Bit();
+    int priority;
+
+    switch (type) {
+    case QtDebugMsg:
+        priority = LOG_DEBUG;
+        break;
+    case QtInfoMsg:
+        priority = LOG_INFO;
+        break;
+    case QtWarningMsg:
+        priority = LOG_WARNING;
+        break;
+    case QtCriticalMsg:
+        priority = LOG_ERR;
+        break;
+    case QtFatalMsg:
+        priority = LOG_CRIT;
+        break;
+    default:
+        priority = LOG_INFO;
+    }
+
+    syslog(priority, "%s", localMsg.constData());
+
+    // For fatal messages, abort as usual
+    if (type == QtFatalMsg) {
+        abort();
+    }
+}
+
 int main(int argc, char *argv[])
 {
+    // Open syslog connection
+    openlog("qmlgreet", LOG_PID | LOG_CONS, LOG_AUTH);
+
+    // Install custom message handler
+    qInstallMessageHandler(syslogMessageHandler);
+
     // Force Breeze style for Qt Quick Controls if not set via env
     if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
         QQuickStyle::setStyle("org.kde.desktop");
@@ -108,5 +149,10 @@ int main(int argc, char *argv[])
 
     engine.load(url);
 
-    return app.exec();
+    int result = app.exec();
+
+    // Close syslog connection
+    closelog();
+
+    return result;
 }

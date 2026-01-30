@@ -52,6 +52,8 @@ void AuthWrapper::login(const QString &username)
 
 void AuthWrapper::respond(const QString &response)
 {
+    qDebug() << "AuthWrapper: respond() called";
+
     // Guard: Don't respond if already processing or no prompt is active
     if (m_processing) {
         qWarning() << "AuthWrapper: Cannot respond while already processing";
@@ -65,6 +67,7 @@ void AuthWrapper::respond(const QString &response)
         return;
     }
 
+    qDebug() << "AuthWrapper: Sending response to prompt:" << m_prompt;
     m_processing = true;
     emit processingChanged();
 
@@ -208,23 +211,29 @@ void AuthWrapper::onReadyRead()
 void AuthWrapper::processMessage(const QJsonObject &json)
 {
     QString type = json["type"].toString();
+    qDebug() << "AuthWrapper: Received message type:" << type;
 
     if (type == "success") {
+        qDebug() << "AuthWrapper: Authentication successful";
+        m_prompt = ""; // Clear the prompt on success
         m_processing = false;
         emit processingChanged();
         emit loginSucceeded();
-    } 
+    }
     else if (type == "auth_message") {
         QString msgType = json["auth_message_type"].toString();
         m_prompt = json["auth_message"].toString();
         m_isSecret = (msgType == "secret");
-        
+        qDebug() << "AuthWrapper: Auth prompt:" << m_prompt << "(secret:" << m_isSecret << ")";
+
         m_processing = false;
         emit promptChanged();
         emit processingChanged();
-    } 
+    }
     else if (type == "error") {
+        m_prompt = ""; // Clear the prompt on error
         m_error = json["description"].toString();
+        qDebug() << "AuthWrapper: Error:" << m_error;
         m_processing = false;
         emit errorChanged();
         emit processingChanged();
