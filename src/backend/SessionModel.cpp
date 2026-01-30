@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QDebug>
 
 SessionModel::SessionModel(QObject *parent) : QAbstractListModel(parent) {
     refresh();
@@ -16,12 +17,20 @@ void SessionModel::refresh() {
     QString dataDirs = qEnvironmentVariable("XDG_DATA_DIRS", "/usr/local/share:/usr/share");
     QStringList searchPaths = dataDirs.split(':', Qt::SkipEmptyParts);
 
+    qDebug() << "SessionModel: Searching for sessions in:" << searchPaths;
+
     // Load from each directory in XDG_DATA_DIRS
     for (const QString &baseDir : searchPaths) {
         QString sessionPath = baseDir + "/wayland-sessions";
         if (QDir(sessionPath).exists()) {
+            qDebug() << "SessionModel: Loading sessions from:" << sessionPath;
             loadSessionsFrom(sessionPath, "wayland");
         }
+    }
+
+    qDebug() << "SessionModel: Total sessions loaded:" << m_sessions.count();
+    for (int i = 0; i < m_sessions.count(); ++i) {
+        qDebug() << "  [" << i << "]" << m_sessions[i].name << ":" << m_sessions[i].exec;
     }
 
     endResetModel();
@@ -74,7 +83,14 @@ QHash<int, QByteArray> SessionModel::roleNames() const {
 }
 
 QString SessionModel::execCommand(int index) {
-    if (index >= 0 && index < m_sessions.count())
-        return m_sessions[index].exec;
+    qDebug() << "SessionModel: execCommand called with index:" << index << "/ total sessions:" << m_sessions.count();
+
+    if (index >= 0 && index < m_sessions.count()) {
+        QString cmd = m_sessions[index].exec;
+        qDebug() << "SessionModel: Returning command:" << cmd;
+        return cmd;
+    }
+
+    qWarning() << "SessionModel: Invalid index, returning empty string";
     return QString();
 }

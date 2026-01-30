@@ -108,6 +108,18 @@ void AuthWrapper::startSession(const QString &cmd)
     m_processing = true;
     emit processingChanged();
 
+    // Safety check for empty commands
+    if (cmd.trimmed().isEmpty()) {
+        qWarning() << "AuthWrapper: startSession called with empty command!";
+        m_error = "Internal Error: No session command provided.";
+        emit errorChanged();
+        m_processing = false;
+        emit processingChanged();
+        return;
+    }
+
+    qDebug() << "AuthWrapper: Starting session with command:" << cmd;
+
     if (m_isMock) {
         qDebug() << "Mock: Requesting launch of:" << cmd;
         // Simulate a short delay before "launching"
@@ -126,12 +138,16 @@ void AuthWrapper::startSession(const QString &cmd)
         cmdArray.append(arg);
     }
 
+    qDebug() << "AuthWrapper: Command split into" << args.size() << "arguments:" << args;
+
     // Prepare environment variables
     QStringList envList = prepareEnv();
     QJsonArray envArray;
     for (const QString &envVar : envList) {
         envArray.append(envVar);
     }
+
+    qDebug() << "AuthWrapper: Prepared" << envList.size() << "environment variables";
 
     // Protocol: { "type": "start_session", "cmd": ["prog", "arg1", ...], "env": ["VAR=value", ...] }
     QJsonObject json;
