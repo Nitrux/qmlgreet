@@ -162,7 +162,6 @@ Window {
             visible: battery.available
             text: battery.info
             color: "white"
-            font.pixelSize: 18
             font.weight: Font.Medium
             
             background: Rectangle {

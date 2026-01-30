@@ -6,6 +6,8 @@
 #include <QCommandLineParser>
 #include <QPalette>
 #include <QQuickStyle>
+#include <QIcon> 
+#include <QFont>
 #include "backend/AuthWrapper.h"
 #include "backend/SessionModel.h"
 #include "backend/UserModel.h"
@@ -16,27 +18,25 @@
 
 int main(int argc, char *argv[])
 {
-    // Set Qt Quick Controls style before creating QGuiApplication
-    QQuickStyle::setStyle("org.kde.desktop");
+    // Force Breeze style for Qt Quick Controls if not set via env
+    if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
+        QQuickStyle::setStyle("org.kde.desktop");
+    }
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("qmlgreet");
     app.setApplicationVersion("1.0");
 
-    // Parse command-line arguments
     QCommandLineParser parser;
     parser.setApplicationDescription("QML-based greeter for greetd");
     parser.addHelpOption();
     parser.addVersionOption();
 
-    QCommandLineOption configOption(QStringList() << "c" << "config",
-        "Path to configuration file",
-        "config",
-        "/etc/qmlgreet/qmlgreet.conf");
+    QCommandLineOption configOption(QStringList() << "c" << "config", "Path to config", "config", "/etc/qmlgreet/qmlgreet.conf");
     parser.addOption(configOption);
-
     parser.process(app);
 
+    // Register Types
     qmlRegisterType<AuthWrapper>("QmlGreet", 1, 0, "AuthWrapper");
     qmlRegisterType<SessionModel>("QmlGreet", 1, 0, "SessionModel");
     qmlRegisterType<UserModel>("QmlGreet", 1, 0, "UserModel");
@@ -44,61 +44,61 @@ int main(int argc, char *argv[])
     qmlRegisterType<LayerShell>("QmlGreet", 1, 0, "LayerShell");
     qmlRegisterType<SystemBattery>("QmlGreet", 1, 0, "SystemBattery");
 
-    // Load color scheme from configuration
     ColorSchemeLoader *colorScheme = new ColorSchemeLoader(&app);
 
-    // Load configuration file from command-line argument or default path
+    // Default Configuration
     QString configPath = parser.value(configOption);
     QString colorSchemePath = "/usr/share/color-schemes/CatppuccinMochaNitrux.colors";
     QString backgroundImagePath;
+    QString iconTheme = "Luv"; 
+    QString fontName = "Noto Sans";
+    int fontSize = 10;
 
-    qDebug() << "Reading config from:" << configPath;
-
+    // Load Configuration
     if (QFile::exists(configPath)) {
         QSettings config(configPath, QSettings::IniFormat);
         config.beginGroup("Appearance");
         colorSchemePath = config.value("ColorScheme", colorSchemePath).toString();
         backgroundImagePath = config.value("BackgroundImage", "").toString();
+        iconTheme = config.value("IconTheme", iconTheme).toString();
+        fontName = config.value("Font", fontName).toString();
+        fontSize = config.value("FontSize", fontSize).toInt();
         config.endGroup();
-
-        qDebug() << "BackgroundImage from config:" << backgroundImagePath;
-    } else {
-        qWarning() << "Config file not found at:" << configPath;
-        if (configPath != "/etc/qmlgreet/qmlgreet.conf") {
-            qWarning() << "Using default config path";
-        }
     }
 
-    // Load the color scheme and get the palette
+    // Set Application Font
+    if (!fontName.isEmpty()) {
+        QFont font(fontName);
+        if (fontSize > 0) {
+            font.setPointSize(fontSize);
+        }
+        app.setFont(font);
+    }
+
+    // Set the Icon Theme explicitly
+    if (!iconTheme.isEmpty()) {
+        QIcon::setThemeName(iconTheme);
+    }
+
+    // Load Color Scheme (Palette)
     QPalette palette;
     if (QFile::exists(colorSchemePath)) {
         palette = colorScheme->loadColorScheme(colorSchemePath);
         app.setPalette(palette);
-        qDebug() << "=== Application Palette Set ===";
-    } else {
-        qWarning() << "Color scheme not found at:" << colorSchemePath;
-        qWarning() << "Using built-in defaults";
     }
 
-    // Set background image if specified and exists
-    if (!backgroundImagePath.isEmpty()) {
-        if (QFile::exists(backgroundImagePath)) {
-            colorScheme->setBackgroundImage(backgroundImagePath);
-        } else {
-            qWarning() << "Background image not found at:" << backgroundImagePath;
-        }
+    // Load Background
+    if (!backgroundImagePath.isEmpty() && QFile::exists(backgroundImagePath)) {
+        colorScheme->setBackgroundImage(backgroundImagePath);
     }
 
     QQmlApplicationEngine engine;
-
-    // Make color scheme available to QML
     engine.rootContext()->setContextProperty("ColorScheme", colorScheme);
 
     const QUrl url(QStringLiteral("qrc:/resources/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl)
-            QCoreApplication::exit(-1);
+        if (!obj && url == objUrl) QCoreApplication::exit(-1);
     }, Qt::QueuedConnection);
 
     engine.load(url);
