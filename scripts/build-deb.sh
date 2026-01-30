@@ -13,7 +13,7 @@ set -e
 
 SRC_DIR="$(mktemp -d)"
 
-git clone --depth 1 --branch "$QMLGREET_BRANCH" https://gitlab.com/Nitrux/qmlgreet.git "$SRC_DIR/qmlgreet-src"
+git clone --depth 1 --branch "$QMLGREET_BRANCH" https://github.com/Nitrux/qmlgreet.git "$SRC_DIR/qmlgreet-src"
 
 cd "$SRC_DIR/qmlgreet-src"
 
