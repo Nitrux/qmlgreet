@@ -88,6 +88,7 @@ sources += [
     'src/backend/SessionModel.cpp',
     'src/backend/UserModel.cpp',
     'src/backend/SystemPower.cpp',
+    'src/backend/SystemBattery.cpp',
     'src/backend/LayerShell.cpp',
     'src/backend/ColorSchemeLoader.cpp',
 ]
@@ -98,6 +99,7 @@ moc_headers = [
     'src/backend/SessionModel.h',
     'src/backend/UserModel.h',
     'src/backend/SystemPower.h',
+    'src/backend/SystemBattery.h',
     'src/backend/LayerShell.h',
     'src/backend/ColorSchemeLoader.h',
 ]

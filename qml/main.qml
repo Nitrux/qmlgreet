@@ -25,6 +25,7 @@ Window {
     Component.onCompleted: {
         layerShell.activate()
         root.visible = true
+        if (userModel.rowCount() > 0) userCombo.currentIndex = 0
     }
 
     AuthWrapper {
@@ -42,9 +43,11 @@ Window {
     }
 
     SystemPower { id: power }
+    SystemBattery { id: battery }
     UserModel { id: userModel }
     SessionModel { id: sessionModel }
 
+    // --- Background ---
     Rectangle {
         anchors.fill: parent
         color: Maui.Theme.backgroundColor
@@ -73,182 +76,228 @@ Window {
         anchors.fill: parent; color: Maui.Theme.backgroundColor; opacity: 0.76; z: 1
     }
 
-    ColumnLayout {
+    // --- Top Elements ---
+    
+    // Top Left: Profile
+    RowLayout {
         anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.left: parent.left
         anchors.margins: Maui.Style.space.big
-        spacing: Maui.Style.space.small
+        spacing: Maui.Style.space.medium
         z: 10
-        width: Math.min(parent.width - Maui.Style.space.big * 2, 600)
 
         Label {
-            id: clock
-            Layout.alignment: Qt.AlignHCenter
+            text: qsTr("Profile")
             color: Maui.Theme.textColor
-            font.pixelSize: Maui.Style.fontSizes.big
-            font.bold: true
-            Timer {
-                interval: 1000; running: true; repeat: true
-                onTriggered: clock.text = Qt.formatDateTime(new Date(), "hh:mm A - dddd, MMM d")
-            }
+            font.weight: Font.DemiBold
+            verticalAlignment: Text.AlignVCenter
         }
+        StyledComboBox {
+            id: userCombo
+            Layout.preferredWidth: 200
+            model: userModel
+            textRole: "realName"
+        }
+    }
 
+    // Top Right: Session
+    RowLayout {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: Maui.Style.space.big
+        spacing: Maui.Style.space.medium
+        z: 10
+
+        Label {
+            text: qsTr("Session")
+            color: Maui.Theme.textColor
+            font.weight: Font.DemiBold
+            verticalAlignment: Text.AlignVCenter
+        }
         StyledComboBox {
             id: sessionCombo
-            Layout.alignment: Qt.AlignHCenter
-            Layout.preferredWidth: Math.min(parent.width, 300)
+            Layout.preferredWidth: 240
             model: sessionModel
             textRole: "name"
         }
     }
 
+    // Top Center: Clock and Battery
+    ColumnLayout {
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.topMargin: 80
+        spacing: 0
+        z: 10
+
+        Label {
+            id: timeLabel
+            Layout.alignment: Qt.AlignHCenter
+            font.pixelSize: 150
+            font.bold: true
+            
+            Timer {
+                interval: 1000; running: true; repeat: true
+                onTriggered: {
+                    var d = new Date()
+                    timeLabel.text = Qt.formatDateTime(d, "hh:mm")
+                    dateLabel.text = Qt.formatDateTime(d, "dddd, d MMMM yyyy")
+                }
+            }
+        }
+
+        Label {
+            id: dateLabel
+            Layout.alignment: Qt.AlignHCenter
+            font.pixelSize: 20
+            font.weight: Font.Medium
+        }
+
+        // Spacer between Date and Battery
+        Item { height: 16 }
+
+        Label {
+            id: batteryLabel
+            Layout.alignment: Qt.AlignHCenter
+            visible: battery.available
+            text: battery.info
+            color: "white"
+            font.pixelSize: 18
+            font.weight: Font.Medium
+            
+            background: Rectangle {
+                color: Qt.rgba(0,0,0,0.3)
+                radius: 12
+            }
+            topPadding: 4; bottomPadding: 4; leftPadding: 12; rightPadding: 12
+        }
+    }
+
+    // --- User and Password ---
     StackLayout {
         id: loginStack
         anchors.centerIn: parent
-        width: Math.min(parent.width - Maui.Style.space.big * 2, 600)
+        width: parent.width
+        height: parent.height
         currentIndex: 0
         z: 10
 
-        // View 0: Select User
-        ColumnLayout {
-            spacing: Maui.Style.space.big
+        // View 0: Avatar
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-            Maui.SectionHeader {
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignHCenter
-                text1: "Select User"
-                text2: "Choose your account to login"
-            }
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: Maui.Style.space.big
 
-            Item {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.fillWidth: true 
-                Layout.preferredHeight: 220
+                Rectangle {
+                    Layout.alignment: Qt.AlignHCenter
+                    width: 130 
+                    height: 130
+                    radius: 65
+                    color: "transparent"
+                    border.color: mouseArea.containsMouse ? Maui.Theme.highlightColor : "transparent"
+                    border.width: 3
+                    Behavior on border.color { ColorAnimation { duration: 150 } }
 
-                ListView {
-                    id: userView
-                    anchors.centerIn: parent
-                    width: Math.min(parent.width, contentWidth)
-                    height: 220
-                    orientation: ListView.Horizontal
-                    model: userModel
-                    spacing: Maui.Style.space.big
-                    clip: false
-                    interactive: contentWidth > width
+                    property int uIndex: userCombo.currentIndex
+                    property string iconPath: uIndex >= 0 ? userModel.data(userModel.index(uIndex, 0), 259) : ""
 
-                    delegate: Item {
-                        width: 140
-                        height: 220
+                    Maui.Icon {
+                        anchors.centerIn: parent
+                        width: 112; height: 112
+                        source: "user-identity"
+                        color: Maui.Theme.textColor
+                        visible: avatarImg.status !== Image.Ready
+                    }
 
-                        ColumnLayout {
-                            anchors.centerIn: parent
-                            width: parent.width
-                            spacing: Maui.Style.space.medium
+                    Item {
+                        anchors.centerIn: parent
+                        width: 120; height: 120
+                        Image {
+                            id: avatarImg
+                            anchors.fill: parent
+                            source: parent.parent.iconPath ? "file://" + parent.parent.iconPath : ""
+                            fillMode: Image.PreserveAspectCrop
+                            visible: false; cache: false
+                        }
+                        OpacityMask {
+                            anchors.fill: avatarImg; source: avatarImg
+                            maskSource: Rectangle { width: 120; height: 120; radius: 60 }
+                            visible: parent.parent.iconPath && avatarImg.status === Image.Ready
+                        }
+                    }
 
-                            // Avatar Circle
-                            Rectangle {
-                                id: avatarContainer
-                                Layout.alignment: Qt.AlignHCenter
-                                width: 120
-                                height: 120
-                                radius: 60
-                                
-                                // Avatar Hover Effect
-                                color: avatarMouseArea.containsMouse ? ColorScheme.buttonBackground : "transparent"
-                                border.color: (ListView.isCurrentItem || avatarMouseArea.containsMouse) ? Maui.Theme.highlightColor : "transparent"
-                                border.width: 3
-
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                                Maui.Icon {
-                                    anchors.centerIn: parent
-                                    width: 112; height: 112
-                                    source: "user-identity"
-                                    color: Maui.Theme.textColor
-                                    visible: !avatarImg.visible
-                                }
-
-                                Item {
-                                    anchors.centerIn: parent
-                                    width: 112; height: 112
-                                    Image {
-                                        id: avatarImg
-                                        anchors.fill: parent
-                                        source: iconPath ? "file://" + iconPath : ""
-                                        fillMode: Image.PreserveAspectCrop
-                                        visible: false
-                                        cache: false
-                                    }
-                                    OpacityMask {
-                                        anchors.fill: avatarImg
-                                        source: avatarImg
-                                        maskSource: Rectangle { width: 112; height: 112; radius: 56 }
-                                        visible: iconPath && avatarImg.status === Image.Ready
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: avatarMouseArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        userView.currentIndex = index
-                                        auth.login(username)
-                                    }
-                                }
-                            }
-
-                            Label {
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignHCenter
-                                text: realName
-                                color: Maui.Theme.textColor
-                                font.pixelSize: Maui.Style.fontSizes.medium
-                                font.weight: Font.Medium
-                                horizontalAlignment: Text.AlignHCenter
-                                elide: Text.ElideRight
-                                wrapMode: Text.WordWrap
-                                maximumLineCount: 2
+                    MouseArea {
+                        id: mouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            var idx = userCombo.currentIndex
+                            if (idx >= 0) {
+                                var username = userModel.data(userModel.index(idx, 0), 257)
+                                auth.login(username)
                             }
                         }
                     }
+                }
+
+                Label {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: {
+                        if (userCombo.currentIndex < 0) return ""
+                        return userModel.data(userModel.index(userCombo.currentIndex, 0), 258)
+                    }
+                    color: Maui.Theme.textColor
+                    font.pixelSize: Maui.Style.fontSizes.large
+                    font.weight: Font.Light
                 }
             }
         }
 
         // View 1: Password
-        ColumnLayout {
-            spacing: Maui.Style.space.medium
-            Maui.SectionHeader {
-                Layout.fillWidth: true; text1: auth.currentPrompt || "Password"; text2: "Enter your password to continue"
-            }
-            Maui.TextField {
-                id: passwordField
-                Layout.fillWidth: true; Layout.preferredHeight: Maui.Style.rowHeight
-                echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
-                placeholderText: "Enter password"
-                onAccepted: auth.respond(text)
-                SequentialAnimation {
-                    id: errorAnimation
-                    NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 10; duration: 50 }
-                    NumberAnimation { target: passwordField; property: "x"; to: passwordField.x - 10; duration: 50 }
-                    NumberAnimation { target: passwordField; property: "x"; to: passwordField.x; duration: 50 }
+        Item {
+            Layout.fillWidth: true; Layout.fillHeight: true
+            ColumnLayout {
+                anchors.centerIn: parent
+                width: Math.min(parent.width - Maui.Style.space.big * 2, 400)
+                spacing: Maui.Style.space.medium
+
+                Maui.SectionHeader {
+                    Layout.fillWidth: true
+                    text1: auth.currentPrompt || "Password"
+                    text2: "Enter your password to continue"
                 }
-            }
-            Label {
-                Layout.fillWidth: true; text: auth.error; color: Maui.Theme.negativeTextColor
-                visible: auth.error !== ""; font.pixelSize: Maui.Style.fontSizes.small; horizontalAlignment: Text.AlignHCenter
-            }
-            StyledButton {
-                Layout.alignment: Qt.AlignHCenter; text: "Cancel"
-                onClicked: { auth.cancel(); loginStack.currentIndex = 0 }
+
+                Maui.TextField {
+                    id: passwordField
+                    Layout.fillWidth: true; Layout.preferredHeight: Maui.Style.rowHeight
+                    echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
+                    placeholderText: "Enter password"
+                    onAccepted: auth.respond(text)
+
+                    SequentialAnimation {
+                        id: errorAnimation
+                        NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 10; duration: 50 }
+                        NumberAnimation { target: passwordField; property: "x"; to: passwordField.x - 10; duration: 50 }
+                        NumberAnimation { target: passwordField; property: "x"; to: passwordField.x; duration: 50 }
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true; text: auth.error; color: Maui.Theme.negativeTextColor
+                    visible: auth.error !== ""; font.pixelSize: Maui.Style.fontSizes.small; horizontalAlignment: Text.AlignHCenter
+                }
+
+                StyledButton {
+                    Layout.alignment: Qt.AlignHCenter; text: "Cancel"
+                    onClicked: { auth.cancel(); loginStack.currentIndex = 0 }
+                }
             }
         }
     }
 
-    // Bottom Bar
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
@@ -263,7 +312,6 @@ Window {
             id: buttonRow
             anchors.centerIn: parent
             spacing: Maui.Style.space.small
-            
             StyledButton { iconName: "system-suspend"; visible: true; onClicked: power.suspend() }
             StyledButton { iconName: "system-reboot"; visible: power.canReboot(); onClicked: power.reboot() }
             StyledButton { iconName: "system-shutdown"; visible: power.canPowerOff(); onClicked: power.powerOff() }

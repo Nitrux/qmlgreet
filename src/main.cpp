@@ -12,6 +12,7 @@
 #include "backend/SystemPower.h"
 #include "backend/LayerShell.h"
 #include "backend/ColorSchemeLoader.h"
+#include "backend/SystemBattery.h"
 
 int main(int argc, char *argv[])
 {
@@ -41,6 +42,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<UserModel>("QmlGreet", 1, 0, "UserModel");
     qmlRegisterType<SystemPower>("QmlGreet", 1, 0, "SystemPower");
     qmlRegisterType<LayerShell>("QmlGreet", 1, 0, "LayerShell");
+    qmlRegisterType<SystemBattery>("QmlGreet", 1, 0, "SystemBattery");
 
     // Load color scheme from configuration
     ColorSchemeLoader *colorScheme = new ColorSchemeLoader(&app);
