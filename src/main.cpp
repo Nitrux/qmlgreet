@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     QString configPath = parser.value(configOption);
     QString colorSchemePath = "/usr/share/color-schemes/QMLGreetDefault.colors";
     QString backgroundImagePath;
-    QString iconTheme = "Luv"; 
+    QString iconTheme = "hicolor"; 
     QString fontName = "Noto Sans";
     int fontSize = 10;
     QString defaultSession = "";
