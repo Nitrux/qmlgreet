@@ -306,7 +306,9 @@ Window {
         height: 60 
         
         color: Maui.Theme.backgroundColor
-        radius: Maui.Style.radiusV
+        
+        radius: 15
+        
         z: 10
 
         RowLayout {
