@@ -30,8 +30,8 @@ Rectangle {
     Maui.Icon {
         anchors.centerIn: parent
         source: root.iconName
-        width: 32
-        height: 32
+        width: 40
+        height: 40
         color: ColorScheme.buttonForeground
         visible: root.text === "" && root.iconName !== ""
     }

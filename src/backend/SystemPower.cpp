@@ -36,18 +36,36 @@ void SystemPower::suspend()
 
 void SystemPower::hibernate()
 {
-    QDBusInterface interface("org.freedesktop.login1", 
+    QDBusInterface interface("org.freedesktop.login1",
                              "/org/freedesktop/login1",
-                             "org.freedesktop.login1.Manager", 
+                             "org.freedesktop.login1.Manager",
                              QDBusConnection::systemBus());
     interface.call("Hibernate", true);
 }
 
+void SystemPower::hybridSleep()
+{
+    QDBusInterface interface("org.freedesktop.login1",
+                             "/org/freedesktop/login1",
+                             "org.freedesktop.login1.Manager",
+                             QDBusConnection::systemBus());
+    interface.call("HybridSleep", true);
+}
+
+void SystemPower::suspendThenHibernate()
+{
+    QDBusInterface interface("org.freedesktop.login1",
+                             "/org/freedesktop/login1",
+                             "org.freedesktop.login1.Manager",
+                             QDBusConnection::systemBus());
+    interface.call("SuspendThenHibernate", true);
+}
+
 bool SystemPower::canPowerOff()
 {
-    QDBusInterface interface("org.freedesktop.login1", 
+    QDBusInterface interface("org.freedesktop.login1",
                              "/org/freedesktop/login1",
-                             "org.freedesktop.login1.Manager", 
+                             "org.freedesktop.login1.Manager",
                              QDBusConnection::systemBus());
     QDBusReply<QString> reply = interface.call("CanPowerOff");
     return reply.isValid() && (reply.value() == "yes");
@@ -55,10 +73,50 @@ bool SystemPower::canPowerOff()
 
 bool SystemPower::canReboot()
 {
-    QDBusInterface interface("org.freedesktop.login1", 
+    QDBusInterface interface("org.freedesktop.login1",
                              "/org/freedesktop/login1",
-                             "org.freedesktop.login1.Manager", 
+                             "org.freedesktop.login1.Manager",
                              QDBusConnection::systemBus());
     QDBusReply<QString> reply = interface.call("CanReboot");
+    return reply.isValid() && (reply.value() == "yes");
+}
+
+bool SystemPower::canSuspend()
+{
+    QDBusInterface interface("org.freedesktop.login1",
+                             "/org/freedesktop/login1",
+                             "org.freedesktop.login1.Manager",
+                             QDBusConnection::systemBus());
+    QDBusReply<QString> reply = interface.call("CanSuspend");
+    return reply.isValid() && (reply.value() == "yes");
+}
+
+bool SystemPower::canHibernate()
+{
+    QDBusInterface interface("org.freedesktop.login1",
+                             "/org/freedesktop/login1",
+                             "org.freedesktop.login1.Manager",
+                             QDBusConnection::systemBus());
+    QDBusReply<QString> reply = interface.call("CanHibernate");
+    return reply.isValid() && (reply.value() == "yes");
+}
+
+bool SystemPower::canHybridSleep()
+{
+    QDBusInterface interface("org.freedesktop.login1",
+                             "/org/freedesktop/login1",
+                             "org.freedesktop.login1.Manager",
+                             QDBusConnection::systemBus());
+    QDBusReply<QString> reply = interface.call("CanHybridSleep");
+    return reply.isValid() && (reply.value() == "yes");
+}
+
+bool SystemPower::canSuspendThenHibernate()
+{
+    QDBusInterface interface("org.freedesktop.login1",
+                             "/org/freedesktop/login1",
+                             "org.freedesktop.login1.Manager",
+                             QDBusConnection::systemBus());
+    QDBusReply<QString> reply = interface.call("CanSuspendThenHibernate");
     return reply.isValid() && (reply.value() == "yes");
 }

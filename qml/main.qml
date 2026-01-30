@@ -78,7 +78,7 @@ Window {
 
     // --- Top Elements ---
     
-    // Top Left: Profile
+    // Top Left: User
     RowLayout {
         anchors.top: parent.top
         anchors.left: parent.left
@@ -297,12 +297,14 @@ Window {
         }
     }
 
+    // --- Bottom Bar ---
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Maui.Style.space.small 
-        width: buttonRow.width + (Maui.Style.space.medium * 2)
-        height: 48 
+        width: buttonRow.width + (Maui.Style.space.big * 2)
+        height: 60 
+        
         color: Maui.Theme.backgroundColor
         radius: Maui.Style.radiusV
         z: 10
@@ -311,7 +313,10 @@ Window {
             id: buttonRow
             anchors.centerIn: parent
             spacing: Maui.Style.space.small
-            StyledButton { iconName: "system-suspend"; visible: true; onClicked: power.suspend() }
+            StyledButton { iconName: "system-suspend"; visible: power.canSuspend(); onClicked: power.suspend() }
+            StyledButton { iconName: "system-suspend-hibernate"; visible: power.canHibernate(); onClicked: power.hibernate() }
+            StyledButton { iconName: "system-suspend-hibernate"; visible: power.canHybridSleep(); onClicked: power.hybridSleep() }
+            StyledButton { iconName: "system-suspend-hibernate"; visible: power.canSuspendThenHibernate(); onClicked: power.suspendThenHibernate() }
             StyledButton { iconName: "system-reboot"; visible: power.canReboot(); onClicked: power.reboot() }
             StyledButton { iconName: "system-shutdown"; visible: power.canPowerOff(); onClicked: power.powerOff() }
         }
