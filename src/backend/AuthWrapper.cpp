@@ -23,6 +23,8 @@ AuthWrapper::AuthWrapper(QObject *parent)
 
 void AuthWrapper::login(const QString &username)
 {
+    qDebug() << "AuthWrapper: login() called with username:" << username;
+
     // Prevent multiple login requests (e.g. double clicks) from firing simultaneously.
     if (m_processing) {
         qWarning() << "AuthWrapper: Login request ignored - already processing.";
@@ -35,6 +37,8 @@ void AuthWrapper::login(const QString &username)
     emit errorChanged();
 
     QString socketPath = qgetenv("GREETD_SOCK");
+    qDebug() << "AuthWrapper: GREETD_SOCK =" << socketPath;
+
     if (socketPath.isEmpty()) {
         qWarning() << "AuthWrapper: No GREETD_SOCK found. Switching to MOCK MODE.";
         m_isMock = true;
@@ -43,6 +47,7 @@ void AuthWrapper::login(const QString &username)
     }
 
     if (m_socket->state() != QLocalSocket::ConnectedState) {
+        qDebug() << "AuthWrapper: Connecting to greetd socket...";
         m_socket->connectToServer(socketPath);
         if (!m_socket->waitForConnected(1000)) {
             m_error = "Could not connect to greetd socket.";
@@ -51,16 +56,20 @@ void AuthWrapper::login(const QString &username)
             emit processingChanged();
             return;
         }
+        qDebug() << "AuthWrapper: Connected to greetd socket";
     }
 
     QJsonObject request;
     request["type"] = "create_session";
     request["username"] = username;
+    qDebug() << "AuthWrapper: Sending create_session request for user:" << username;
     sendCommand(request);
 }
 
 void AuthWrapper::respond(const QString &response)
 {
+    qDebug() << "AuthWrapper: respond() called";
+
     // Guard: Don't respond if already processing or no prompt is active
     if (m_processing) {
         qWarning() << "AuthWrapper: Cannot respond while already processing";
@@ -85,6 +94,7 @@ void AuthWrapper::respond(const QString &response)
     QJsonObject json;
     json["type"] = "post_auth_message_response";
     json["response"] = response;
+    qDebug() << "AuthWrapper: Sending password response to greetd";
     sendCommand(json);
 }
 
@@ -243,9 +253,12 @@ void AuthWrapper::onReadyRead()
 
 void AuthWrapper::processMessage(const QJsonObject &json)
 {
+    qDebug() << "AuthWrapper: Received message from greetd:" << QJsonDocument(json).toJson(QJsonDocument::Compact);
+
     QString type = json["type"].toString();
 
     if (type == "success") {
+        qDebug() << "AuthWrapper: Authentication successful, emitting loginSucceeded signal";
         m_processing = false;
         emit processingChanged();
         emit loginSucceeded();

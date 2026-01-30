@@ -26,7 +26,7 @@ public:
     // Call this to reload sessions from disk
     Q_INVOKABLE void refresh();
     
-    // helper to get the command for a specific index
+    // Helper to get the command for a specific index
     Q_INVOKABLE QString execCommand(int index);
 
 private:
