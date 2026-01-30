@@ -87,7 +87,7 @@ Window {
         z: 10
 
         Label {
-            text: qsTr("Profile")
+            text: qsTr("User")
             color: Maui.Theme.textColor
             font.weight: Font.DemiBold
             verticalAlignment: Text.AlignVCenter
@@ -250,8 +250,7 @@ Window {
                         return userModel.data(userModel.index(userCombo.currentIndex, 0), 258)
                     }
                     color: Maui.Theme.textColor
-                    font.pixelSize: Maui.Style.fontSizes.large
-                    font.weight: Font.Light
+                    font.weight: Font.Medium
                 }
             }
         }
