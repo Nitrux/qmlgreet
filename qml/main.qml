@@ -26,6 +26,15 @@ Window {
         layerShell.activate()
         root.visible = true
         if (userModel.rowCount() > 0) userCombo.currentIndex = 0
+        if (ConfigDefaultSession !== "") {
+            for (var i = 0; i < sessionModel.rowCount(); i++) {
+                var name = sessionModel.data(sessionModel.index(i, 0), 257)
+                if (name === ConfigDefaultSession) {
+                    sessionCombo.currentIndex = i
+                    break
+                }
+            }
+        }
     }
 
     AuthWrapper {

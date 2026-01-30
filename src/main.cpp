@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     parser.addOption(configOption);
     parser.process(app);
 
-    // Register Types
+    // Register QML types
     qmlRegisterType<AuthWrapper>("QmlGreet", 1, 0, "AuthWrapper");
     qmlRegisterType<SessionModel>("QmlGreet", 1, 0, "SessionModel");
     qmlRegisterType<UserModel>("QmlGreet", 1, 0, "UserModel");
@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
     QString iconTheme = "Luv"; 
     QString fontName = "Noto Sans";
     int fontSize = 10;
+    QString defaultSession = "";
 
     // Load Configuration
     if (QFile::exists(configPath)) {
@@ -64,36 +65,39 @@ int main(int argc, char *argv[])
         fontName = config.value("Font", fontName).toString();
         fontSize = config.value("FontSize", fontSize).toInt();
         config.endGroup();
+        config.beginGroup("General");
+        defaultSession = config.value("DefaultSession", "").toString();
+        config.endGroup();
     }
 
-    // Set Application Font
+    // Set font
     if (!fontName.isEmpty()) {
         QFont font(fontName);
-        if (fontSize > 0) {
-            font.setPointSize(fontSize);
-        }
+        if (fontSize > 0) font.setPointSize(fontSize);
         app.setFont(font);
     }
 
-    // Set the Icon Theme explicitly
+    // Set icon theme
     if (!iconTheme.isEmpty()) {
         QIcon::setThemeName(iconTheme);
     }
 
-    // Load Color Scheme (Palette)
+    // Set color scheme
     QPalette palette;
     if (QFile::exists(colorSchemePath)) {
         palette = colorScheme->loadColorScheme(colorSchemePath);
         app.setPalette(palette);
     }
 
-    // Load Background
+    // Set background image
     if (!backgroundImagePath.isEmpty() && QFile::exists(backgroundImagePath)) {
         colorScheme->setBackgroundImage(backgroundImagePath);
     }
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("ColorScheme", colorScheme);
+    
+    engine.rootContext()->setContextProperty("ConfigDefaultSession", defaultSession);
 
     const QUrl url(QStringLiteral("qrc:/resources/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
