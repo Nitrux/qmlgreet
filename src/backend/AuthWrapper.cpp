@@ -116,6 +116,7 @@ void AuthWrapper::cancel()
 void AuthWrapper::startSession(const QString &cmd)
 {
     m_processing = true;
+    m_sessionStarting = true;
     emit processingChanged();
 
     // Safety check for empty commands
@@ -124,6 +125,7 @@ void AuthWrapper::startSession(const QString &cmd)
         m_error = "Internal Error: No session command provided.";
         emit errorChanged();
         m_processing = false;
+        m_sessionStarting = false;
         emit processingChanged();
         return;
     }
@@ -258,10 +260,17 @@ void AuthWrapper::processMessage(const QJsonObject &json)
     QString type = json["type"].toString();
 
     if (type == "success") {
-        qDebug() << "AuthWrapper: Authentication successful, emitting loginSucceeded signal";
-        m_processing = false;
-        emit processingChanged();
-        emit loginSucceeded();
+        if (m_sessionStarting) {
+            qDebug() << "AuthWrapper: Session started successfully, quitting greeter";
+            // Session started successfully - greetd will now launch the session
+            // The greeter should exit
+            QCoreApplication::quit();
+        } else {
+            qDebug() << "AuthWrapper: Authentication successful, emitting loginSucceeded signal";
+            m_processing = false;
+            emit processingChanged();
+            emit loginSucceeded();
+        }
     }
     else if (type == "auth_message") {
         QString msgType = json["auth_message_type"].toString();
@@ -325,6 +334,7 @@ void AuthWrapper::reset()
     m_error = "";
     m_isSecret = false;
     m_processing = false;
+    m_sessionStarting = false;
     m_expectedLength = 0;
     m_buffer.clear();
     m_isMock = false;

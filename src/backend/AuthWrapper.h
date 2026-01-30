@@ -87,13 +87,14 @@ private:
     void runMockResponse(const QString &response);
 
     QLocalSocket *m_socket;
-    
+
     // Internal State
     QString m_prompt;
     QString m_error;
     bool m_isSecret = false;
     bool m_processing = false;
     bool m_isMock = false;
+    bool m_sessionStarting = false;
 
     // Buffer for incoming JSON packets
     QByteArray m_buffer;
