@@ -286,6 +286,7 @@ Window {
                     MouseArea {
                         id: mouseArea
                         anchors.fill: parent
+                        enabled: !auth.processing
                         hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             var idx = userCombo.currentIndex
