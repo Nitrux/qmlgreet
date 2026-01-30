@@ -26,27 +26,34 @@ void AuthWrapper::login(const QString &username)
     emit errorChanged();
 
     QString socketPath = qgetenv("GREETD_SOCK");
+    qDebug() << "AuthWrapper::login - GREETD_SOCK:" << socketPath;
+
     if (socketPath.isEmpty()) {
-        qWarning() << "AuthWrapper: No GREETD_SOCK found. Switching to MOCK MODE.";
+        qWarning() << "AuthWrapper: No GREETD_SOCK environment variable found. Switching to MOCK MODE.";
+        qWarning() << "AuthWrapper: If running under greetd, ensure the greeter is launched correctly.";
         m_isMock = true;
         runMockLogin(username);
         return;
     }
 
     if (m_socket->state() != QLocalSocket::ConnectedState) {
+        qDebug() << "AuthWrapper: Connecting to socket:" << socketPath;
         m_socket->connectToServer(socketPath);
-        if (!m_socket->waitForConnected(1000)) {
-            m_error = "Could not connect to greetd socket.";
+        if (!m_socket->waitForConnected(3000)) {  // Increased timeout to 3 seconds
+            m_error = "Could not connect to greetd socket: " + m_socket->errorString();
+            qWarning() << "AuthWrapper: Connection failed:" << m_error;
             emit errorChanged();
             m_processing = false;
             emit processingChanged();
             return;
         }
+        qDebug() << "AuthWrapper: Successfully connected to greetd socket";
     }
 
     QJsonObject request;
     request["type"] = "create_session";
     request["username"] = username;
+    qDebug() << "AuthWrapper: Sending create_session for user:" << username;
     sendCommand(request);
 }
 

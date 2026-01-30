@@ -8,6 +8,8 @@
 #include <QQuickStyle>
 #include <QIcon>
 #include <QFont>
+#include <QTextStream>
+#include <QDateTime>
 #include <syslog.h>
 #include "backend/AuthWrapper.h"
 #include "backend/SessionModel.h"
@@ -17,33 +19,55 @@
 #include "backend/ColorSchemeLoader.h"
 #include "backend/SystemBattery.h"
 
-// Custom message handler to redirect Qt debug output to syslog
+// Custom message handler to redirect Qt debug output to syslog and file
 void syslogMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
+    Q_UNUSED(context);  // Suppress unused parameter warning
+
     QByteArray localMsg = msg.toLocal8Bit();
+    const char *typeStr = "";
     int priority;
 
     switch (type) {
     case QtDebugMsg:
-        priority = LOG_DEBUG;
+        priority = LOG_INFO;  // Use LOG_INFO instead of LOG_DEBUG to ensure it's logged
+        typeStr = "DEBUG";
         break;
     case QtInfoMsg:
         priority = LOG_INFO;
+        typeStr = "INFO";
         break;
     case QtWarningMsg:
         priority = LOG_WARNING;
+        typeStr = "WARNING";
         break;
     case QtCriticalMsg:
         priority = LOG_ERR;
+        typeStr = "CRITICAL";
         break;
     case QtFatalMsg:
         priority = LOG_CRIT;
+        typeStr = "FATAL";
         break;
     default:
         priority = LOG_INFO;
+        typeStr = "UNKNOWN";
     }
 
-    syslog(priority, "%s", localMsg.constData());
+    // Log to syslog with type prefix
+    syslog(priority, "[%s] %s", typeStr, localMsg.constData());
+
+    // Also write to a dedicated log file
+    static QFile logFile("/tmp/qmlgreet.log");
+    if (!logFile.isOpen()) {
+        logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
+    }
+    if (logFile.isOpen()) {
+        QTextStream out(&logFile);
+        out << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
+            << " [" << typeStr << "] " << msg << "\n";
+        out.flush();
+    }
 
     // For fatal messages, abort as usual
     if (type == QtFatalMsg) {
@@ -54,10 +78,14 @@ void syslogMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 int main(int argc, char *argv[])
 {
     // Open syslog connection
-    openlog("qmlgreet", LOG_PID | LOG_CONS, LOG_AUTH);
+    openlog("qmlgreet", LOG_PID | LOG_CONS, LOG_USER);
 
     // Install custom message handler
     qInstallMessageHandler(syslogMessageHandler);
+
+    qInfo() << "qmlgreet starting...";
+    qInfo() << "GREETD_SOCK environment variable:" << qgetenv("GREETD_SOCK");
+    qInfo() << "Running as user:" << qgetenv("USER");
 
     // Force Breeze style for Qt Quick Controls if not set via env
     if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
