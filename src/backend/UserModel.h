@@ -25,5 +25,6 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
 private:
+    QString findUserAvatar(const QString &username, const QString &homeDir);
     QVector<User> m_users;
 };

@@ -5,4 +5,7 @@
         <file>qml/StyledButton.qml</file>
         <file>qml/StyledComboBox.qml</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file>icons/user-avatar.svg</file>
+    </qresource>
 </RCC>

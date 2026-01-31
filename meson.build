@@ -8,8 +8,14 @@ project(
 		'cpp_std=c++17',
 		'warning_level=2',
 		'werror=false',
+		'buildtype=release',
 	],
 )
+
+# Disable debug output in release builds
+if get_option('buildtype') == 'release'
+	add_project_arguments('-DQT_NO_DEBUG_OUTPUT', language: 'cpp')
+endif
 
 # Standard Qt6 Modules for QML
 qt_mod = import('qt6')
@@ -32,14 +38,19 @@ qt6_core5compat = dependency('Qt6Core5Compat', required: true)
 # MauiKit4 library - required for QML plugin types to work
 # The QML plugin needs the main library to be loaded for type registration
 # Force link with --no-as-needed to ensure the library is loaded at runtime
+mauikit_dep = dependency('MauiKit4', required: true)
 mauikit_lib = declare_dependency(
-    link_args: ['-Wl,--no-as-needed', '/usr/lib/x86_64-linux-gnu/libMauiKit4.so.4', '-Wl,--as-needed']
+    dependencies: mauikit_dep,
+    link_args: ['-Wl,--no-as-needed']
 )
 
 # Get Qt version for private headers path
 qt6_core = dependency('qt6', modules: ['Core'])
 qt6_version = qt6_core.version()
-qt_private_include = include_directories('/usr/include/x86_64-linux-gnu/qt6/QtGui/@0@/QtGui'.format(qt6_version))
+# Use pkg-config to get the proper include directory for the current architecture
+qt6_gui = dependency('qt6', modules: ['Gui'])
+qt6_includedir = qt6_gui.get_variable(pkgconfig: 'includedir')
+qt_private_include = include_directories(qt6_includedir / 'QtGui' / qt6_version / 'QtGui')
 # Wayland Dependencies (for raw C access)
 wl_client_dep = dependency('wayland-client')
 wl_scanner = find_program('wayland-scanner')
