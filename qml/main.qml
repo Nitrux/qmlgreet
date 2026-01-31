@@ -258,28 +258,26 @@ Window {
                     property int uIndex: userCombo.currentIndex
                     property string iconPath: uIndex >= 0 ? userModel.data(userModel.index(uIndex, 0), 259) : ""
 
-                    Maui.Icon {
-                        anchors.centerIn: parent
-                        width: 128; height: 128
-                        source: "user-identity"
-                        color: Maui.Theme.textColor
-                        visible: avatarImg.status !== Image.Ready
-                    }
-
                     Item {
                         anchors.centerIn: parent
                         width: 138; height: 138
+
                         Image {
                             id: avatarImg
                             anchors.fill: parent
-                            source: parent.parent.iconPath ? "file://" + parent.parent.iconPath : ""
+                            source: {
+                                if (!parent.parent.iconPath) return ""
+                                if (parent.parent.iconPath.startsWith("qrc:")) return parent.parent.iconPath
+                                return "file://" + parent.parent.iconPath
+                            }
                             fillMode: Image.PreserveAspectCrop
                             visible: false; cache: false
                         }
+
                         OpacityMask {
-                            anchors.fill: avatarImg; source: avatarImg
+                            anchors.fill: avatarImg
+                            source: avatarImg
                             maskSource: Rectangle { width: 138; height: 138; radius: 69 }
-                            visible: parent.parent.iconPath && avatarImg.status === Image.Ready
                         }
                     }
 

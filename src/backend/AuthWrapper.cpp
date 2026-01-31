@@ -262,8 +262,18 @@ void AuthWrapper::processMessage(const QJsonObject &json)
     if (type == "success") {
         if (m_canceling) {
             // Successfully canceled the session after an error
-            qDebug() << "AuthWrapper: Session canceled successfully";
+            qDebug() << "AuthWrapper: Session canceled successfully, resetting for retry";
             m_canceling = false;
+            m_processing = false;
+            m_prompt = "";
+
+            // Close and reset the socket to allow fresh login attempts
+            if (m_socket->state() == QLocalSocket::ConnectedState) {
+                m_socket->disconnectFromServer();
+            }
+
+            emit processingChanged();
+            emit promptChanged();
             // Don't emit loginSucceeded - the error was already set
             return;
         }
@@ -304,10 +314,13 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         QString errorType = json["error_type"].toString();
         QString description = json["description"].toString();
 
+        // Provide user-friendly error messages
         if (errorType == "auth_error") {
-            m_error = "Authentication failed: " + description;
+            m_error = "Incorrect password. Please try again.";
+        } else if (description.contains("Connection refused") || description.contains("os error 111")) {
+            m_error = "Session error. Please try logging in again.";
         } else {
-            m_error = "Error: " + description;
+            m_error = description;
         }
 
         qWarning() << "greetd error:" << errorType << "-" << description;
@@ -317,12 +330,17 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         emit errorChanged();
         emit processingChanged();
 
-        // Cancel the session on error
+        // Cancel the session on error and reset for retry
         if (m_socket->state() == QLocalSocket::ConnectedState) {
             m_canceling = true;
             QJsonObject cancelJson;
             cancelJson["type"] = "cancel_session";
             sendCommand(cancelJson);
+        } else {
+            // Socket already closed, just reset to allow retry
+            m_canceling = false;
+            m_prompt = "";
+            emit promptChanged();
         }
     }
 }
