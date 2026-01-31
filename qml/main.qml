@@ -98,9 +98,19 @@ Window {
         onErrorChanged: {
             if (auth.error !== "") {
                 errorAnimation.start()
-                // Reset to avatar view on error so user can retry
-                loginStack.currentIndex = 0
+                // Show error message for 2 seconds before resetting to avatar view
+                errorResetTimer.start()
             }
+        }
+    }
+
+    // Timer to reset view after showing error message
+    Timer {
+        id: errorResetTimer
+        interval: 2000
+        repeat: false
+        onTriggered: {
+            loginStack.currentIndex = 0
         }
     }
 
