@@ -276,8 +276,16 @@ Window {
                             anchors.fill: parent
                             source: {
                                 var iconPath = parent.parent.iconPath
-                                if (!iconPath) return "qrc:/icons/user-avatar.svg"
-                                if (iconPath.startsWith("qrc:")) return iconPath
+                                console.log("Avatar iconPath:", iconPath)
+                                if (!iconPath) {
+                                    console.log("No iconPath, using fallback")
+                                    return "qrc:/icons/user-avatar.svg"
+                                }
+                                if (iconPath.startsWith("qrc:")) {
+                                    console.log("Using QRC path:", iconPath)
+                                    return iconPath
+                                }
+                                console.log("Using file path:", iconPath)
                                 return "file://" + iconPath
                             }
                             fillMode: Image.PreserveAspectCrop
@@ -285,7 +293,9 @@ Window {
                             cache: false
                             // Use fallback if image fails to load
                             onStatusChanged: {
+                                console.log("Avatar status:", status, "source:", source)
                                 if (status === Image.Error) {
+                                    console.log("Image failed to load, trying fallback")
                                     source = "qrc:/icons/user-avatar.svg"
                                 }
                             }
