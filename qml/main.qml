@@ -71,9 +71,12 @@ Window {
     AuthWrapper {
         id: auth
         onPromptChanged: {
-            passwordField.text = ""
-            passwordField.forceActiveFocus()
-            loginStack.currentIndex = 1
+            if (auth.currentPrompt !== "") {
+                // Only switch to password view if there's actually a prompt
+                passwordField.text = ""
+                passwordField.forceActiveFocus()
+                loginStack.currentIndex = 1
+            }
         }
         onLoginSucceeded: {
             auth.error = ""
