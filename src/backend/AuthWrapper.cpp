@@ -260,6 +260,14 @@ void AuthWrapper::processMessage(const QJsonObject &json)
     QString type = json["type"].toString();
 
     if (type == "success") {
+        if (m_canceling) {
+            // Successfully canceled the session after an error
+            qDebug() << "AuthWrapper: Session canceled successfully";
+            m_canceling = false;
+            // Don't emit loginSucceeded - the error was already set
+            return;
+        }
+
         if (m_sessionStarting) {
             qDebug() << "AuthWrapper: Session started successfully, quitting greeter";
             // Session started successfully - greetd will now launch the session
@@ -305,11 +313,13 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         qWarning() << "greetd error:" << errorType << "-" << description;
 
         m_processing = false;
+        m_sessionStarting = false;
         emit errorChanged();
         emit processingChanged();
 
         // Cancel the session on error
         if (m_socket->state() == QLocalSocket::ConnectedState) {
+            m_canceling = true;
             QJsonObject cancelJson;
             cancelJson["type"] = "cancel_session";
             sendCommand(cancelJson);
@@ -335,6 +345,7 @@ void AuthWrapper::reset()
     m_isSecret = false;
     m_processing = false;
     m_sessionStarting = false;
+    m_canceling = false;
     m_expectedLength = 0;
     m_buffer.clear();
     m_isMock = false;

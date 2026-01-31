@@ -95,6 +95,7 @@ private:
     bool m_processing = false;
     bool m_isMock = false;
     bool m_sessionStarting = false;
+    bool m_canceling = false;
 
     // Buffer for incoming JSON packets
     QByteArray m_buffer;
