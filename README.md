@@ -11,10 +11,14 @@ QMLGreet is a modern, lightweight greeter (login screen) designed for `greetd`. 
 
 QMLGreet runs natively on Wayland compositors (such as Hyprland or Sway) using the Layer Shell protocol.
 
+> [!WARNING]
+> QMLGreet does not support X11. QMLGreet's main target is Nitrux OS, and using it in other distributions is not within its scope. Please do not open issues regarding this use case; they will be closed.
+
 ## Features
 
 - Wayland-native: Integrates seamlessly with wlroots-based compositors via the `wlr-layer-shell-unstable-v1` protocol.
-- Configurable: Customize the look and feel via `/etc/qmlgreet/qmlgreet.conf`.
+- Configurable: 
+    * Customize the look and feel via `/etc/qmlgreet/qmlgreet.conf`.
     * Supports standard `.colors` schemes (KDE style).
     * Configurable font family and base font size.
     * Support for custom icon themes.
