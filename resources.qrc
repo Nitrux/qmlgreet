@@ -6,6 +6,6 @@
         <file>qml/StyledComboBox.qml</file>
     </qresource>
     <qresource prefix="/icons">
-        <file>icons/user-avatar.svg</file>
+        <file alias="user-avatar.svg">icons/user-avatar.svg</file>
     </qresource>
 </RCC>
