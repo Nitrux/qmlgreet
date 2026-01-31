@@ -92,7 +92,13 @@ Window {
                 auth.error = "No session selected"
             }
         }
-        onErrorChanged: { if (auth.error !== "") errorAnimation.start() }
+        onErrorChanged: {
+            if (auth.error !== "") {
+                errorAnimation.start()
+                // Reset to avatar view on error so user can retry
+                loginStack.currentIndex = 0
+            }
+        }
     }
 
     SystemPower { id: power }
@@ -266,12 +272,20 @@ Window {
                             id: avatarImg
                             anchors.fill: parent
                             source: {
-                                if (!parent.parent.iconPath) return ""
-                                if (parent.parent.iconPath.startsWith("qrc:")) return parent.parent.iconPath
-                                return "file://" + parent.parent.iconPath
+                                var iconPath = parent.parent.iconPath
+                                if (!iconPath) return "qrc:/icons/user-avatar.svg"
+                                if (iconPath.startsWith("qrc:")) return iconPath
+                                return "file://" + iconPath
                             }
                             fillMode: Image.PreserveAspectCrop
-                            visible: false; cache: false
+                            visible: false
+                            cache: false
+                            // Use fallback if image fails to load
+                            onStatusChanged: {
+                                if (status === Image.Error) {
+                                    source = "qrc:/icons/user-avatar.svg"
+                                }
+                            }
                         }
 
                         OpacityMask {
