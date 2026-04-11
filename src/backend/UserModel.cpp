@@ -1,26 +1,34 @@
 #include "UserModel.h"
 #include <pwd.h>
-#include <QFile>
+#include <QFileInfo>
+#include <QImageReader>
 
-UserModel::UserModel(QObject *parent) : QAbstractListModel(parent) {
+UserModel::UserModel(QObject *parent)
+    : UserModel(QString(), parent)
+{
+}
+
+UserModel::UserModel(const QString &avatarOverridePattern, QObject *parent)
+    : QAbstractListModel(parent)
+    , m_avatarOverridePattern(avatarOverridePattern.trimmed())
+{
+    loadUsers();
+}
+
+void UserModel::loadUsers() {
     beginResetModel();
+    m_users.clear();
 
-    // Iterate system users
     struct passwd *pwent;
     setpwent();
-    while ((pwent = getpwent()) != NULL) {
-        int uid = pwent->pw_uid;
+    while ((pwent = getpwent()) != nullptr) {
+        const int uid = pwent->pw_uid;
 
-        // Filter: standard users usually start at 1000.
         if (uid >= 1000 && uid < 60000) {
-            QString name = pwent->pw_name;
-            QString gecos = QString::fromUtf8(pwent->pw_gecos).split(",").first();
-            QString home = pwent->pw_dir;
-
-            // Try multiple sources for user avatar, in order of preference:
-            // 1. AccountsService (system-wide, readable by greeter)
-            // 2. ~/.face (user's home, may not be readable by _greetd)
-            QString icon = findUserAvatar(name, home);
+            const QString name = pwent->pw_name;
+            const QString gecos = QString::fromUtf8(pwent->pw_gecos).split(",").first();
+            const QString home = pwent->pw_dir;
+            const QString icon = findUserAvatar(name, home);
 
             m_users.append({name, gecos.isEmpty() ? name : gecos, icon});
         }
@@ -30,29 +38,58 @@ UserModel::UserModel(QObject *parent) : QAbstractListModel(parent) {
     endResetModel();
 }
 
-QString UserModel::findUserAvatar(const QString &username, const QString &homeDir) {
-    // Try standard locations in order of preference
+QString UserModel::findUserAvatar(const QString &username, const QString &homeDir) const {
+    const QString configuredAvatar = resolveAvatarOverride(username, homeDir);
+    if (isUsableAvatarFile(configuredAvatar)) {
+        return configuredAvatar;
+    }
 
-    // 1. Try ~/.face
     QString icon = homeDir + "/.face";
-    if (QFile::exists(icon)) {
+    if (isUsableAvatarFile(icon)) {
         return icon;
     }
 
-    // 2. Try ~/.face.icon
     icon = homeDir + "/.face.icon";
-    if (QFile::exists(icon)) {
+    if (isUsableAvatarFile(icon)) {
         return icon;
     }
 
-    // 3. Try AccountsService (readable by system greeter)
     icon = QString("/var/lib/AccountsService/icons/%1").arg(username);
-    if (QFile::exists(icon)) {
+    if (isUsableAvatarFile(icon)) {
         return icon;
     }
 
-    // 4. Use bundled fallback icon
     return "qrc:/icons/user-avatar.svg";
+}
+
+QString UserModel::resolveAvatarOverride(const QString &username, const QString &homeDir) const {
+    if (m_avatarOverridePattern.isEmpty()) {
+        return QString();
+    }
+
+    QString resolvedPath = m_avatarOverridePattern;
+    resolvedPath.replace("%u", username);
+    resolvedPath.replace("%h", homeDir);
+    return resolvedPath;
+}
+
+bool UserModel::isUsableAvatarFile(const QString &path) const {
+    if (path.isEmpty()) {
+        return false;
+    }
+
+    if (path.startsWith("qrc:")) {
+        return true;
+    }
+
+    const QFileInfo info(path);
+    if (!info.exists() || !info.isFile() || !info.isReadable()) {
+        return false;
+    }
+
+    QImageReader reader(path);
+    reader.setDecideFormatFromContent(true);
+    return reader.canRead();
 }
 
 int UserModel::rowCount(const QModelIndex &) const {

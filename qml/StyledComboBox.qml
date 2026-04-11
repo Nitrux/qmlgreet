@@ -9,11 +9,24 @@ ComboBox {
 
     implicitWidth: 240
     implicitHeight: 36
+    activeFocusOnTab: true
+    focusPolicy: Qt.StrongFocus
 
     background: Rectangle {
         radius: Maui.Style.radiusV
         color: ColorScheme.viewBackground
-        border.color: "transparent"
+        border.color: (control.activeFocus || pop.visible) ? ColorScheme.buttonFocus : "transparent"
+        border.width: (control.activeFocus || pop.visible) ? 1 : 0
+
+        Behavior on border.color { ColorAnimation { duration: 150 } }
+        Behavior on border.width { NumberAnimation { duration: 150 } }
+    }
+
+    Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_Escape && pop.visible) {
+            pop.close()
+            event.accepted = true
+        }
     }
 
     contentItem: Label {
@@ -41,19 +54,17 @@ ComboBox {
 
             model: DelegateModel {
                 model: control.model
-                
+
                 delegate: ItemDelegate {
                     width: control.width - 8
                     height: 32
                     padding: 0
-                    
-                    // Manual Highlight Check
+
                     highlighted: control.highlightedIndex === index
 
                     contentItem: Label {
-                        // Safe text binding via the DelegateModel wrapper
                         text: model[control.textRole]
-                        
+
                         color: ColorScheme.buttonForeground
                         font: control.font
                         elide: Text.ElideRight
@@ -63,13 +74,13 @@ ComboBox {
 
                     background: Rectangle {
                         anchors.fill: parent
-                        anchors.margins: 2 
+                        anchors.margins: 2
                         radius: Maui.Style.radiusV
-                        
+
                         color: ColorScheme.buttonBackground
                         opacity: (parent.highlighted || parent.hovered) ? 0.3 : 0.0
                     }
-                    
+
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
@@ -81,7 +92,7 @@ ComboBox {
                     }
                 }
             }
-            
+
             currentIndex: control.highlightedIndex
             boundsBehavior: Flickable.StopAtBounds
             ScrollIndicator.vertical: ScrollIndicator { }

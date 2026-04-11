@@ -54,12 +54,112 @@ Window {
         }
     }
 
+    function visiblePowerButtons() {
+        var buttons = [suspendButton, hibernateButton, hybridSleepButton, suspendThenHibernateButton, rebootButton, shutdownButton]
+        var visibleButtons = []
+
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i] && buttons[i].visible) {
+                visibleButtons.push(buttons[i])
+            }
+        }
+
+        return visibleButtons
+    }
+
+    function firstVisiblePowerButton(fallbackItem) {
+        var buttons = visiblePowerButtons()
+        return buttons.length > 0 ? buttons[0] : fallbackItem
+    }
+
+    function lastVisiblePowerButton(fallbackItem) {
+        var buttons = visiblePowerButtons()
+        return buttons.length > 0 ? buttons[buttons.length - 1] : fallbackItem
+    }
+
+    function focusLoginSelection() {
+        if (loginStack.currentIndex === 1) {
+            passwordField.forceActiveFocus()
+            return
+        }
+
+        if (userModel.rowCount() > 0) {
+            avatarButton.forceActiveFocus()
+        } else {
+            sessionCombo.forceActiveFocus()
+        }
+    }
+
+    function focusInitialControl() {
+        if (loginStack.currentIndex === 1) {
+            passwordField.forceActiveFocus()
+            return
+        }
+
+        if (userModel.rowCount() > 0) {
+            userCombo.forceActiveFocus()
+        } else {
+            sessionCombo.forceActiveFocus()
+        }
+    }
+
+    function startSelectedUserLogin() {
+        if (auth.processing) {
+            return
+        }
+
+        var idx = userCombo.currentIndex
+        if (idx >= 0) {
+            var username = userModel.data(userModel.index(idx, 0), 257)
+            auth.login(username)
+        }
+    }
+
+    function cancelLoginPrompt() {
+        auth.cancel()
+        loginStack.currentIndex = 0
+    }
+
+    function movePowerFocus(currentButton, step, allowExit) {
+        var buttons = visiblePowerButtons()
+
+        if (buttons.length === 0) {
+            focusLoginSelection()
+            return
+        }
+
+        var index = buttons.indexOf(currentButton)
+        if (index === -1) {
+            buttons[0].forceActiveFocus()
+            return
+        }
+
+        var nextIndex = index + step
+        if (nextIndex < 0 || nextIndex >= buttons.length) {
+            if (allowExit) {
+                if (loginStack.currentIndex === 1) {
+                    passwordField.forceActiveFocus()
+                } else if (step > 0) {
+                    userCombo.forceActiveFocus()
+                } else {
+                    avatarButton.forceActiveFocus()
+                }
+            } else {
+                buttons[index].forceActiveFocus()
+            }
+            return
+        }
+
+        buttons[nextIndex].forceActiveFocus()
+    }
+
     Component.onCompleted: {
         layerShell.activate()
         root.visible = true
         if (userModel.rowCount() > 0) userCombo.currentIndex = 0
-        
+
         selectDefaultSession()
+        Qt.callLater(function() { focusInitialControl() })
     }
 
     Connections {
@@ -74,7 +174,6 @@ Window {
             if (auth.currentPrompt !== "") {
                 // Only switch to password view if there's actually a prompt
                 passwordField.text = ""
-                passwordField.forceActiveFocus()
                 loginStack.currentIndex = 1
             }
         }
@@ -116,7 +215,6 @@ Window {
 
     SystemPower { id: power }
     SystemBattery { id: battery }
-    UserModel { id: userModel }
     SessionModel { id: sessionModel }
 
     // --- Background ---
@@ -169,6 +267,14 @@ Window {
             Layout.preferredWidth: 200
             model: userModel
             textRole: "realName"
+            KeyNavigation.tab: sessionCombo
+            KeyNavigation.backtab: root.lastVisiblePowerButton(avatarButton)
+            Keys.onRightPressed: function(event) {
+                if (!popup.visible) {
+                    sessionCombo.forceActiveFocus()
+                    event.accepted = true
+                }
+            }
         }
     }
 
@@ -191,6 +297,14 @@ Window {
             Layout.preferredWidth: 240
             model: sessionModel
             textRole: "name"
+            KeyNavigation.tab: avatarButton
+            KeyNavigation.backtab: userCombo
+            Keys.onLeftPressed: function(event) {
+                if (!popup.visible) {
+                    userCombo.forceActiveFocus()
+                    event.accepted = true
+                }
+            }
         }
     }
 
@@ -255,6 +369,10 @@ Window {
         currentIndex: 0
         z: 10
 
+        onCurrentIndexChanged: {
+            Qt.callLater(function() { focusLoginSelection() })
+        }
+
         // View 0: Avatar
         Item {
             Layout.fillWidth: true
@@ -265,17 +383,49 @@ Window {
                 spacing: Maui.Style.space.big
 
                 Rectangle {
+                    id: avatarButton
                     Layout.alignment: Qt.AlignHCenter
                     width: 150 
                     height: 150
                     radius: 75
-                    color: "transparent"
-                    border.color: mouseArea.containsMouse ? Maui.Theme.highlightColor : "transparent"
+                    color: avatarButton.activeFocus ? Qt.rgba(1, 1, 1, 0.04) : "transparent"
+                    border.color: (avatarButton.activeFocus || mouseArea.containsMouse) ? Maui.Theme.highlightColor : "transparent"
                     border.width: 3
+                    activeFocusOnTab: loginStack.currentIndex === 0 && mouseArea.enabled
+                    KeyNavigation.tab: root.firstVisiblePowerButton(userCombo)
+                    KeyNavigation.backtab: sessionCombo
                     Behavior on border.color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: 150 } }
 
                     property int uIndex: userCombo.currentIndex
                     property string iconPath: uIndex >= 0 ? userModel.data(userModel.index(uIndex, 0), 259) : ""
+
+                    Keys.onPressed: function(event) {
+                        switch (event.key) {
+                        case Qt.Key_Return:
+                        case Qt.Key_Enter:
+                        case Qt.Key_Space:
+                            root.startSelectedUserLogin()
+                            event.accepted = true
+                            break
+                        case Qt.Key_Left:
+                            userCombo.forceActiveFocus()
+                            event.accepted = true
+                            break
+                        case Qt.Key_Right:
+                            sessionCombo.forceActiveFocus()
+                            event.accepted = true
+                            break
+                        case Qt.Key_Up:
+                            userCombo.forceActiveFocus()
+                            event.accepted = true
+                            break
+                        case Qt.Key_Down:
+                            root.firstVisiblePowerButton(avatarButton).forceActiveFocus()
+                            event.accepted = true
+                            break
+                        }
+                    }
 
                     Item {
                         anchors.centerIn: parent
@@ -285,6 +435,10 @@ Window {
                             id: avatarImg
                             anchors.fill: parent
                             source: {
+                                if (!ConfigShowAvatars) {
+                                    return "qrc:/icons/user-avatar.svg"
+                                }
+
                                 var iconPath = parent.parent.iconPath
                                 console.log("Avatar iconPath:", iconPath)
                                 if (!iconPath) {
@@ -323,13 +477,8 @@ Window {
                         anchors.fill: parent
                         enabled: !auth.processing
                         hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            var idx = userCombo.currentIndex
-                            if (idx >= 0) {
-                                var username = userModel.data(userModel.index(idx, 0), 257)
-                                auth.login(username)
-                            }
-                        }
+                        onPressed: avatarButton.forceActiveFocus()
+                        onClicked: root.startSelectedUserLogin()
                     }
                 }
 
@@ -365,6 +514,16 @@ Window {
                     echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
                     placeholderText: "Enter password"
                     enabled: !auth.processing
+                    KeyNavigation.tab: cancelButton
+                    KeyNavigation.backtab: cancelButton
+                    Keys.onEscapePressed: function(event) {
+                        root.cancelLoginPrompt()
+                        event.accepted = true
+                    }
+                    Keys.onDownPressed: function(event) {
+                        cancelButton.forceActiveFocus()
+                        event.accepted = true
+                    }
                     onAccepted: {
                         if (!auth.processing && text.length > 0) {
                             auth.respond(text)
@@ -441,8 +600,13 @@ Window {
                 }
 
                 StyledButton {
+                    id: cancelButton
                     Layout.alignment: Qt.AlignHCenter; text: "Cancel"
-                    onClicked: { auth.cancel(); loginStack.currentIndex = 0 }
+                    keyNavTab: function() { passwordField.forceActiveFocus() }
+                    keyNavBacktab: function() { passwordField.forceActiveFocus() }
+                    keyNavUp: function() { passwordField.forceActiveFocus() }
+                    keyNavEscape: function() { root.cancelLoginPrompt() }
+                    onClicked: root.cancelLoginPrompt()
                 }
             }
         }
@@ -464,12 +628,78 @@ Window {
             id: buttonRow
             anchors.centerIn: parent
             spacing: Maui.Style.space.small
-            StyledButton { iconName: "system-suspend"; visible: power.canSuspend(); onClicked: power.suspend() }
-            StyledButton { iconName: "system-suspend-hibernate"; visible: power.canHibernate(); onClicked: power.hibernate() }
-            StyledButton { iconName: "system-suspend-hibernate"; visible: power.canHybridSleep(); onClicked: power.hybridSleep() }
-            StyledButton { iconName: "system-suspend-hibernate"; visible: power.canSuspendThenHibernate(); onClicked: power.suspendThenHibernate() }
-            StyledButton { iconName: "system-reboot"; visible: power.canReboot(); onClicked: power.reboot() }
-            StyledButton { iconName: "system-shutdown"; visible: power.canPowerOff(); onClicked: power.powerOff() }
+
+            StyledButton {
+                id: suspendButton
+                iconName: "system-suspend"
+                visible: power.canSuspend()
+                keyNavLeft: function() { root.movePowerFocus(suspendButton, -1, false) }
+                keyNavRight: function() { root.movePowerFocus(suspendButton, 1, false) }
+                keyNavUp: function() { root.focusLoginSelection() }
+                keyNavTab: function() { root.movePowerFocus(suspendButton, 1, true) }
+                keyNavBacktab: function() { root.movePowerFocus(suspendButton, -1, true) }
+                onClicked: power.suspend()
+            }
+
+            StyledButton {
+                id: hibernateButton
+                iconName: "system-suspend-hibernate"
+                visible: power.canHibernate()
+                keyNavLeft: function() { root.movePowerFocus(hibernateButton, -1, false) }
+                keyNavRight: function() { root.movePowerFocus(hibernateButton, 1, false) }
+                keyNavUp: function() { root.focusLoginSelection() }
+                keyNavTab: function() { root.movePowerFocus(hibernateButton, 1, true) }
+                keyNavBacktab: function() { root.movePowerFocus(hibernateButton, -1, true) }
+                onClicked: power.hibernate()
+            }
+
+            StyledButton {
+                id: hybridSleepButton
+                iconName: "system-suspend-hibernate"
+                visible: power.canHybridSleep()
+                keyNavLeft: function() { root.movePowerFocus(hybridSleepButton, -1, false) }
+                keyNavRight: function() { root.movePowerFocus(hybridSleepButton, 1, false) }
+                keyNavUp: function() { root.focusLoginSelection() }
+                keyNavTab: function() { root.movePowerFocus(hybridSleepButton, 1, true) }
+                keyNavBacktab: function() { root.movePowerFocus(hybridSleepButton, -1, true) }
+                onClicked: power.hybridSleep()
+            }
+
+            StyledButton {
+                id: suspendThenHibernateButton
+                iconName: "system-suspend-hibernate"
+                visible: power.canSuspendThenHibernate()
+                keyNavLeft: function() { root.movePowerFocus(suspendThenHibernateButton, -1, false) }
+                keyNavRight: function() { root.movePowerFocus(suspendThenHibernateButton, 1, false) }
+                keyNavUp: function() { root.focusLoginSelection() }
+                keyNavTab: function() { root.movePowerFocus(suspendThenHibernateButton, 1, true) }
+                keyNavBacktab: function() { root.movePowerFocus(suspendThenHibernateButton, -1, true) }
+                onClicked: power.suspendThenHibernate()
+            }
+
+            StyledButton {
+                id: rebootButton
+                iconName: "system-reboot"
+                visible: power.canReboot()
+                keyNavLeft: function() { root.movePowerFocus(rebootButton, -1, false) }
+                keyNavRight: function() { root.movePowerFocus(rebootButton, 1, false) }
+                keyNavUp: function() { root.focusLoginSelection() }
+                keyNavTab: function() { root.movePowerFocus(rebootButton, 1, true) }
+                keyNavBacktab: function() { root.movePowerFocus(rebootButton, -1, true) }
+                onClicked: power.reboot()
+            }
+
+            StyledButton {
+                id: shutdownButton
+                iconName: "system-shutdown"
+                visible: power.canPowerOff()
+                keyNavLeft: function() { root.movePowerFocus(shutdownButton, -1, false) }
+                keyNavRight: function() { root.movePowerFocus(shutdownButton, 1, false) }
+                keyNavUp: function() { root.focusLoginSelection() }
+                keyNavTab: function() { root.movePowerFocus(shutdownButton, 1, true) }
+                keyNavBacktab: function() { root.movePowerFocus(shutdownButton, -1, true) }
+                onClicked: power.powerOff()
+            }
         }
     }
 }

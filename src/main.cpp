@@ -123,6 +123,8 @@ int main(int argc, char *argv[])
     QString fontName = "Noto Sans";
     int fontSize = 10;
     QString defaultSession = "";
+    QString avatarImagePath = "";
+    bool showAvatars = true;
 
     // Load Configuration
     if (QFile::exists(configPath)) {
@@ -134,6 +136,11 @@ int main(int argc, char *argv[])
         iconTheme = config.value("IconTheme", iconTheme).toString();
         fontName = config.value("Font", fontName).toString();
         fontSize = config.value("FontSize", fontSize).toInt();
+        avatarImagePath = config.value("AvatarImage", avatarImagePath).toString();
+        config.endGroup();
+
+        config.beginGroup("Behavior");
+        showAvatars = config.value("ShowAvatars", showAvatars).toBool();
         config.endGroup();
 
         // Read DefaultSession from root level (QSettings doesn't recognize [General] group)
@@ -164,9 +171,12 @@ int main(int argc, char *argv[])
         colorScheme->setBackgroundImage(backgroundImagePath);
     }
 
+    UserModel userModel(avatarImagePath, &app);
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("ColorScheme", colorScheme);
-    
+    engine.rootContext()->setContextProperty("ConfigShowAvatars", showAvatars);
+    engine.rootContext()->setContextProperty("userModel", &userModel);
     engine.rootContext()->setContextProperty("ConfigDefaultSession", defaultSession);
 
     const QUrl url(QStringLiteral("qrc:/resources/qml/main.qml"));
