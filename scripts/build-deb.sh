@@ -22,7 +22,13 @@ cd "$BUILD_WORK_DIR"
 
 # -- Configure build.
 
-meson setup .build --prefix=/usr --buildtype=release -Dcpp_args='-march=x86-64-v3'
+MESON_ARGS=(--prefix=/usr --buildtype=release)
+
+if [ "$(uname -m)" = "x86_64" ]; then
+    MESON_ARGS+=("-Dcpp_args=-march=x86-64-v3")
+fi
+
+meson setup .build "${MESON_ARGS[@]}"
 
 
 # -- Compile source.
