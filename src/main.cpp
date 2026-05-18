@@ -59,10 +59,11 @@ void syslogMessageHandler(QtMsgType type, const QMessageLogContext &context, con
 
     // Also write to a dedicated log file
     static QFile logFile("/tmp/qmlgreet.log");
-    if (!logFile.isOpen()) {
-        logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
+    bool canWriteLogFile = logFile.isOpen();
+    if (!canWriteLogFile) {
+        canWriteLogFile = logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
     }
-    if (logFile.isOpen()) {
+    if (canWriteLogFile) {
         QTextStream out(&logFile);
         out << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")
             << " [" << typeStr << "] " << msg << "\n";
