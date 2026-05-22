@@ -20,6 +20,7 @@ endif
 # Standard Qt6 Modules for QML
 qt_mod = import('qt6')
 qt_deps = dependency('qt6',
+    version: '>=6.9',
     modules: [
         'Core',
         'Gui',
@@ -33,22 +34,22 @@ qt_deps = dependency('qt6',
 )
 
 # Qt6Core5Compat for Qt5Compat.GraphicalEffects
-qt6_core5compat = dependency('Qt6Core5Compat', required: true)
+qt6_core5compat = dependency('Qt6Core5Compat', version: '>=6.9', required: true)
 
 # MauiKit4 library - required for QML plugin types to work
 # The QML plugin needs the main library to be loaded for type registration
 # Force link with --no-as-needed to ensure the library is loaded at runtime
-mauikit_dep = dependency('MauiKit4', required: true)
+mauikit_dep = dependency('MauiKit4', version: '>=4.0.3', required: true)
 mauikit_lib = declare_dependency(
     dependencies: mauikit_dep,
     link_args: ['-Wl,--no-as-needed']
 )
 
 # Get Qt version for private headers path
-qt6_core = dependency('qt6', modules: ['Core'])
+qt6_core = dependency('qt6', version: '>=6.9', modules: ['Core'])
 qt6_version = qt6_core.version()
 # Use pkg-config to get the proper include directory for the current architecture
-qt6_gui = dependency('qt6', modules: ['Gui'])
+qt6_gui = dependency('qt6', version: '>=6.9', modules: ['Gui'])
 qt6_includedir = qt6_gui.get_variable(pkgconfig: 'includedir')
 qt_private_include = include_directories(qt6_includedir / 'QtGui' / qt6_version / 'QtGui')
 # Wayland Dependencies (for raw C access)
