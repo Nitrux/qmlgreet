@@ -39,7 +39,7 @@ qt6_core5compat = dependency('Qt6Core5Compat', version: '>=6.9', required: true)
 # MauiKit4 library - required for QML plugin types to work
 # The QML plugin needs the main library to be loaded for type registration
 # Force link with --no-as-needed to ensure the library is loaded at runtime
-mauikit_dep = dependency('MauiKit4', version: '>=4.0.3', required: true)
+mauikit_dep = dependency('MauiKit4', version: '>=4.0.4', required: true)
 mauikit_lib = declare_dependency(
     dependencies: mauikit_dep,
     link_args: ['-Wl,--no-as-needed']
