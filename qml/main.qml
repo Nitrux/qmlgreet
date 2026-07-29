@@ -354,7 +354,7 @@ Window {
             
             background: Rectangle {
                 color: Qt.rgba(0,0,0,0.3)
-                radius: 12
+                radius: Math.min(ConfigBorderRadius, height / 2)
             }
             topPadding: 4; bottomPadding: 4; leftPadding: 12; rightPadding: 12
         }
@@ -534,7 +534,7 @@ Window {
                     palette.highlightedText: Maui.Theme.highlightedTextColor
 
                     background: Rectangle {
-                        radius: Maui.Style.radiusV
+                        radius: Math.min(ConfigBorderRadius, height / 2)
                         color: {
                             if (passwordField.activeFocus) return ColorScheme.buttonBackground
                             if (passwordFieldHover.containsMouse) return ColorScheme.buttonHover
@@ -621,7 +621,7 @@ Window {
         height: 60 
         
         color: Maui.Theme.backgroundColor
-        radius: 15
+        radius: Math.min(ConfigBorderRadius, height / 2)
         z: 10
 
         RowLayout {
@@ -632,6 +632,7 @@ Window {
             StyledButton {
                 id: suspendButton
                 iconName: "system-suspend"
+                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
                 visible: power.canSuspend()
                 keyNavLeft: function() { root.movePowerFocus(suspendButton, -1, false) }
                 keyNavRight: function() { root.movePowerFocus(suspendButton, 1, false) }
@@ -644,6 +645,7 @@ Window {
             StyledButton {
                 id: hibernateButton
                 iconName: "system-suspend-hibernate"
+                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
                 visible: power.canHibernate()
                 keyNavLeft: function() { root.movePowerFocus(hibernateButton, -1, false) }
                 keyNavRight: function() { root.movePowerFocus(hibernateButton, 1, false) }
@@ -656,6 +658,7 @@ Window {
             StyledButton {
                 id: hybridSleepButton
                 iconName: "system-suspend-hibernate"
+                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
                 visible: power.canHybridSleep()
                 keyNavLeft: function() { root.movePowerFocus(hybridSleepButton, -1, false) }
                 keyNavRight: function() { root.movePowerFocus(hybridSleepButton, 1, false) }
@@ -668,6 +671,7 @@ Window {
             StyledButton {
                 id: suspendThenHibernateButton
                 iconName: "system-suspend-hibernate"
+                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
                 visible: power.canSuspendThenHibernate()
                 keyNavLeft: function() { root.movePowerFocus(suspendThenHibernateButton, -1, false) }
                 keyNavRight: function() { root.movePowerFocus(suspendThenHibernateButton, 1, false) }
@@ -680,6 +684,7 @@ Window {
             StyledButton {
                 id: rebootButton
                 iconName: "system-reboot"
+                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
                 visible: power.canReboot()
                 keyNavLeft: function() { root.movePowerFocus(rebootButton, -1, false) }
                 keyNavRight: function() { root.movePowerFocus(rebootButton, 1, false) }
@@ -692,6 +697,7 @@ Window {
             StyledButton {
                 id: shutdownButton
                 iconName: "system-shutdown"
+                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
                 visible: power.canPowerOff()
                 keyNavLeft: function() { root.movePowerFocus(shutdownButton, -1, false) }
                 keyNavRight: function() { root.movePowerFocus(shutdownButton, 1, false) }

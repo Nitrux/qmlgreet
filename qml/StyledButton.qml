@@ -8,6 +8,7 @@ Rectangle {
 
     property string iconName: ""
     property string text: ""
+    property real cornerRadius: ConfigBorderRadius
     property alias enabled: mouseArea.enabled
     property var keyNavLeft
     property var keyNavRight
@@ -31,7 +32,7 @@ Rectangle {
         return text !== "" ? ColorScheme.buttonBackground : "transparent"
     }
 
-    radius: Maui.Style.radiusV
+    radius: Math.min(Math.max(0, cornerRadius), height / 2)
     border.width: (mouseArea.containsMouse || mouseArea.pressed || root.activeFocus) ? 1 : 0
     border.color: ColorScheme.buttonFocus
 

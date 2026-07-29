@@ -13,7 +13,7 @@ ComboBox {
     focusPolicy: Qt.StrongFocus
 
     background: Rectangle {
-        radius: Maui.Style.radiusV
+        radius: Math.min(ConfigBorderRadius, height / 2)
         color: ColorScheme.viewBackground
         border.color: (control.activeFocus || pop.visible) ? ColorScheme.buttonFocus : "transparent"
         border.width: (control.activeFocus || pop.visible) ? 1 : 0
@@ -75,7 +75,7 @@ ComboBox {
                     background: Rectangle {
                         anchors.fill: parent
                         anchors.margins: 2
-                        radius: Maui.Style.radiusV
+                        radius: Math.min(Math.max(0, ConfigBorderRadius - pop.padding - anchors.margins), height / 2)
 
                         color: ColorScheme.buttonBackground
                         opacity: (parent.highlighted || parent.hovered) ? 0.3 : 0.0
@@ -102,7 +102,7 @@ ComboBox {
             color: ColorScheme.windowBackground
             border.color: Qt.rgba(1, 1, 1, 0.08)
             border.width: 1
-            radius: Maui.Style.radiusV
+            radius: Math.min(ConfigBorderRadius, height / 2)
         }
     }
 }

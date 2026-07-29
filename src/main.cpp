@@ -126,6 +126,8 @@ int main(int argc, char *argv[])
     QString defaultSession = "";
     QString avatarImagePath = "";
     bool showAvatars = true;
+    constexpr int defaultBorderRadius = 8;
+    int borderRadius = defaultBorderRadius;
 
     // Load Configuration
     if (QFile::exists(configPath)) {
@@ -142,6 +144,18 @@ int main(int argc, char *argv[])
 
         config.beginGroup("Behavior");
         showAvatars = config.value("ShowAvatars", showAvatars).toBool();
+        config.endGroup();
+
+        config.beginGroup("Style");
+        bool borderRadiusOk = false;
+        const int configuredBorderRadius =
+            config.value("BorderRadius", defaultBorderRadius).toInt(&borderRadiusOk);
+        if (borderRadiusOk && configuredBorderRadius >= 0) {
+            borderRadius = configuredBorderRadius;
+        } else {
+            qWarning() << "Invalid BorderRadius in" << configPath
+                       << "- using default value" << defaultBorderRadius;
+        }
         config.endGroup();
 
         // Read DefaultSession from root level (QSettings doesn't recognize [General] group)
@@ -179,6 +193,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("ConfigShowAvatars", showAvatars);
     engine.rootContext()->setContextProperty("userModel", &userModel);
     engine.rootContext()->setContextProperty("ConfigDefaultSession", defaultSession);
+    engine.rootContext()->setContextProperty("ConfigBorderRadius", borderRadius);
 
     const QUrl url(QStringLiteral("qrc:/resources/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
