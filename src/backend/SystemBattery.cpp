@@ -52,11 +52,20 @@ void SystemBattery::refresh()
         status = QString::fromUtf8(statFile.readAll()).trimmed();
     }
 
-    // Format: 🔋 50% (Discharging)
-    QString newInfo = QString("🔋 %1% (%2)").arg(capacity, status);
+    const int percent = capacity.toInt();
+    const QString level = percent < 10 ? QStringLiteral("caution")
+        : percent < 30 ? QStringLiteral("low")
+        : percent < 80 ? QStringLiteral("good") : QStringLiteral("full");
+    const bool charging = status == QStringLiteral("Charging")
+        || status == QStringLiteral("Full");
+    const QString newIconName = charging
+        ? QStringLiteral("battery-%1-charging").arg(level)
+        : QStringLiteral("battery-%1").arg(level);
+    QString newInfo = QString("%1% (%2)").arg(capacity, status);
 
-    if (m_info != newInfo) {
+    if (m_info != newInfo || m_iconName != newIconName) {
         m_info = newInfo;
+        m_iconName = newIconName;
         emit infoChanged();
     }
 

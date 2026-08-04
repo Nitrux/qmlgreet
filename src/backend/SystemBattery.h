@@ -6,12 +6,14 @@ class SystemBattery : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString info READ info NOTIFY infoChanged)
+    Q_PROPERTY(QString iconName READ iconName NOTIFY infoChanged)
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
 
 public:
     explicit SystemBattery(QObject *parent = nullptr);
 
     QString info() const { return m_info; }
+    QString iconName() const { return m_iconName; }
     bool available() const { return m_available; }
 
 signals:
@@ -24,5 +26,6 @@ private slots:
 private:
     QTimer *m_timer;
     QString m_info;
+    QString m_iconName = QStringLiteral("battery-full");
     bool m_available = false;
 };

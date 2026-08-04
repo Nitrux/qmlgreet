@@ -10,6 +10,7 @@
 #include <QFont>
 #include <QTextStream>
 #include <QDateTime>
+#include <QtGlobal>
 #include <syslog.h>
 #include "backend/AuthWrapper.h"
 #include "backend/SessionModel.h"
@@ -126,6 +127,10 @@ int main(int argc, char *argv[])
     QString defaultSession = "";
     QString avatarImagePath = "";
     bool showAvatars = true;
+    bool blurEnabled = true;
+    bool overlayEnabled = true;
+    double overlayOpacity = 0.76;
+    QString iconMode = QStringLiteral("system");
     constexpr int defaultBorderRadius = 8;
     int borderRadius = defaultBorderRadius;
 
@@ -140,6 +145,11 @@ int main(int argc, char *argv[])
         fontName = config.value("Font", fontName).toString();
         fontSize = config.value("FontSize", fontSize).toInt();
         avatarImagePath = config.value("AvatarImage", avatarImagePath).toString();
+        blurEnabled = config.value("BlurEnabled", blurEnabled).toBool();
+        overlayEnabled = config.value("OverlayEnabled", overlayEnabled).toBool();
+        overlayOpacity = qBound(0.0, config.value("OverlayOpacity", overlayOpacity).toDouble(), 1.0);
+        iconMode = config.value("IconMode", iconMode).toString().trimmed().toLower() == QStringLiteral("nerd")
+            ? QStringLiteral("nerd") : QStringLiteral("system");
         config.endGroup();
 
         config.beginGroup("Behavior");
@@ -191,6 +201,10 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("ColorScheme", colorScheme);
     engine.rootContext()->setContextProperty("ConfigShowAvatars", showAvatars);
+    engine.rootContext()->setContextProperty("ConfigBlurEnabled", blurEnabled);
+    engine.rootContext()->setContextProperty("ConfigOverlayEnabled", overlayEnabled);
+    engine.rootContext()->setContextProperty("ConfigOverlayOpacity", overlayOpacity);
+    engine.rootContext()->setContextProperty("IconMode", iconMode);
     engine.rootContext()->setContextProperty("userModel", &userModel);
     engine.rootContext()->setContextProperty("ConfigDefaultSession", defaultSession);
     engine.rootContext()->setContextProperty("ConfigBorderRadius", borderRadius);

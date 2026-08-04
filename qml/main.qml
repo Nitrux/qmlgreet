@@ -230,7 +230,8 @@ Window {
             visible: false; cache: false
         }
         FastBlur {
-            anchors.fill: parent; source: backgroundImage; radius: 64
+            anchors.fill: parent; source: backgroundImage
+            radius: ConfigBlurEnabled ? 64 : 0
             visible: backgroundImage.status === Image.Ready; cached: true
         }
         Rectangle {
@@ -243,7 +244,8 @@ Window {
         }
     }
     Rectangle {
-        anchors.fill: parent; color: Maui.Theme.backgroundColor; opacity: 0.76; z: 1
+        anchors.fill: parent; color: Maui.Theme.backgroundColor
+        opacity: ConfigOverlayOpacity; visible: ConfigOverlayEnabled; z: 1
     }
 
     // --- Top Elements ---
@@ -344,19 +346,44 @@ Window {
         // Spacer between Date and Battery
         Item { height: 16 }
 
-        Label {
+        Rectangle {
             id: batteryLabel
             Layout.alignment: Qt.AlignHCenter
             visible: battery.available
-            text: battery.info
-            color: Maui.Theme.textColor
-            font.weight: Font.Medium
-            
-            background: Rectangle {
-                color: Qt.rgba(0,0,0,0.3)
-                radius: Math.min(ConfigBorderRadius, height / 2)
+            color: Qt.rgba(0, 0, 0, 0.3)
+            radius: Math.min(ConfigBorderRadius, height / 2)
+            implicitWidth: batteryRow.implicitWidth + 24
+            implicitHeight: batteryRow.implicitHeight + 8
+
+            RowLayout {
+                id: batteryRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                Maui.Icon {
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                    source: battery.iconName
+                    visible: IconMode !== "nerd"
+                }
+
+                Label {
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                    text: "\\uf240"
+                    font.family: "Symbols Nerd Font"
+                    font.pixelSize: 16
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    visible: IconMode === "nerd"
+                }
+
+                Label {
+                    text: battery.info
+                    color: Maui.Theme.textColor
+                    font.weight: Font.Medium
+                }
             }
-            topPadding: 4; bottomPadding: 4; leftPadding: 12; rightPadding: 12
         }
     }
 
