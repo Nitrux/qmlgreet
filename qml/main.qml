@@ -214,7 +214,10 @@ Window {
     }
 
     SystemPower { id: power }
-    SystemBattery { id: battery }
+    SystemBattery {
+        id: battery
+        debugBattery: ConfigDebugBattery
+    }
     SessionModel { id: sessionModel }
 
     // --- Background ---
@@ -370,8 +373,10 @@ Window {
                 Label {
                     Layout.preferredWidth: 16
                     Layout.preferredHeight: 16
-                    text: "\\uf240"
+                    text: "\uf240"
                     font.family: "Symbols Nerd Font"
+                    textFormat: Text.PlainText
+                    renderType: Text.QtRendering
                     font.pixelSize: 16
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter

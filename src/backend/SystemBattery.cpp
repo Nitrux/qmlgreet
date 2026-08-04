@@ -11,8 +11,48 @@ SystemBattery::SystemBattery(QObject *parent) : QObject(parent)
     refresh();
 }
 
+void SystemBattery::setDebugBattery(bool debugBattery)
+{
+    if (m_debugBattery == debugBattery) {
+        return;
+    }
+
+    m_debugBattery = debugBattery;
+    m_debugState = 0;
+    m_timer->setInterval(m_debugBattery ? 2000 : 10000);
+    emit debugBatteryChanged();
+    refresh();
+}
+
 void SystemBattery::refresh()
 {
+    if (m_debugBattery) {
+        const int debugPercentages[] = { 0, 25, 50, 75, 100 };
+        const bool charging = m_debugState >= 5;
+        const int percent = debugPercentages[m_debugState % 5];
+        const QString status = charging ? QStringLiteral("Charging")
+                                        : QStringLiteral("Discharging");
+        const QString level = percent < 10 ? QStringLiteral("caution")
+            : percent < 30 ? QStringLiteral("low")
+            : percent < 80 ? QStringLiteral("good") : QStringLiteral("full");
+        const QString newIconName = charging
+            ? QStringLiteral("battery-%1-charging").arg(level)
+            : QStringLiteral("battery-%1").arg(level);
+        const QString newInfo = QStringLiteral("%1% (%2)").arg(percent).arg(status);
+        const bool wasAvailable = m_available;
+
+        m_info = newInfo;
+        m_iconName = newIconName;
+        m_available = true;
+        m_debugState = (m_debugState + 1) % 10;
+
+        if (!wasAvailable) {
+            emit availableChanged();
+        }
+        emit infoChanged();
+        return;
+    }
+
     QString batteryPath;
     QDir dir("/sys/class/power_supply");
     
@@ -31,6 +71,10 @@ void SystemBattery::refresh()
 
     // No battery found
     if (batteryPath.isEmpty()) {
+        if (!m_info.isEmpty()) {
+            m_info.clear();
+            emit infoChanged();
+        }
         if (m_available) {
             m_available = false;
             emit availableChanged();

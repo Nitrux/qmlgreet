@@ -127,6 +127,7 @@ int main(int argc, char *argv[])
     QString defaultSession = "";
     QString avatarImagePath = "";
     bool showAvatars = true;
+    bool debugBattery = false;
     bool blurEnabled = true;
     bool overlayEnabled = true;
     double overlayOpacity = 0.76;
@@ -150,6 +151,10 @@ int main(int argc, char *argv[])
         overlayOpacity = qBound(0.0, config.value("OverlayOpacity", overlayOpacity).toDouble(), 1.0);
         iconMode = config.value("IconMode", iconMode).toString().trimmed().toLower() == QStringLiteral("nerd")
             ? QStringLiteral("nerd") : QStringLiteral("system");
+        config.endGroup();
+
+        config.beginGroup("Debug");
+        debugBattery = config.value("debugBattery", debugBattery).toBool();
         config.endGroup();
 
         config.beginGroup("Behavior");
@@ -201,6 +206,7 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("ColorScheme", colorScheme);
     engine.rootContext()->setContextProperty("ConfigShowAvatars", showAvatars);
+    engine.rootContext()->setContextProperty("ConfigDebugBattery", debugBattery);
     engine.rootContext()->setContextProperty("ConfigBlurEnabled", blurEnabled);
     engine.rootContext()->setContextProperty("ConfigOverlayEnabled", overlayEnabled);
     engine.rootContext()->setContextProperty("ConfigOverlayOpacity", overlayOpacity);
