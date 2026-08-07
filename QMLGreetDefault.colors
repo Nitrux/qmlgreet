@@ -106,8 +106,8 @@ ForegroundPositive=39,174,96
 ForegroundVisited=127,140,141
 
 [General]
-ColorScheme=NitruxMix
-Name=Nitrux
+ColorScheme=QMLGreetDefault
+Name=QMLGreet Default
 shadeSortColumn=true
 
 [KDE]
