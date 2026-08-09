@@ -1,4 +1,4 @@
-#include <MauiKit4/Core/mauiapp.h>
+#include <QQuickStyle>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     qInfo() << "Running as user:" << qgetenv("USER");
 
     QGuiApplication app(argc, argv);
-    MauiApp::instance();
+    QQuickStyle::setStyle(QStringLiteral("org.mauikit.style"));
     app.setApplicationName("qmlgreet");
     app.setApplicationVersion("1.0");
 
