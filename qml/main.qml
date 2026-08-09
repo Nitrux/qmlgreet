@@ -317,37 +317,51 @@ Window {
     ColumnLayout {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: 80
-        spacing: 0
+        anchors.topMargin: Math.max(48, parent.height * 0.08)
+        width: Math.min(900, parent.width - Maui.Style.space.big * 2)
+        spacing: 12
         z: 10
 
-        Label {
+        Maui.IconLabel {
             id: timeLabel
+            Layout.fillWidth: true
+            Layout.preferredHeight: font.pixelSize * 1.05
             Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 155
+            display: ToolButton.TextOnly
+            spacing: 0
             color: Maui.Theme.textColor
-            font.bold: true
-            
+            alignment: Qt.AlignHCenter
+            font.pixelSize: 155
+            font.weight: Font.Bold
+
             Timer {
                 interval: 1000; running: true; repeat: true
                 onTriggered: {
                     var d = new Date()
                     timeLabel.text = Qt.formatDateTime(d, "hh:mm")
-                    dateLabel.text = Qt.formatDateTime(d, "dddd, d MMMM yyyy").toLowerCase()
+                    var formattedDate = Qt.formatDateTime(d, "dddd, d MMMM yyyy")
+                    dateLabel.text = ConfigLowercaseDate ? formattedDate.toLowerCase() : formattedDate
                 }
             }
         }
 
-        Label {
+        Maui.IconLabel {
             id: dateLabel
+            Layout.fillWidth: true
+            Layout.preferredHeight: font.pixelSize * 1.3
             Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 25
+            display: ToolButton.TextOnly
+            spacing: 0
             color: Maui.Theme.textColor
+            alignment: Qt.AlignHCenter
+            font.pixelSize: 25
             font.weight: Font.Light
         }
 
         // Spacer between Date and Battery
-        Item { height: 16 }
+        Item {
+            Layout.preferredHeight: 16
+        }
 
         Rectangle {
             id: batteryLabel
@@ -539,14 +553,27 @@ Window {
                     text2: "Enter your password to continue"
                 }
 
-                Maui.TextField {
+                Maui.PasswordField {
                     id: passwordField
-                    Layout.fillWidth: true; Layout.preferredHeight: Maui.Style.rowHeight
-                    echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
-                    placeholderText: "Enter password"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Maui.Style.rowHeight
                     enabled: !auth.processing
+                    readOnly: auth.processing
+                    echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
+                    passwordMaskDelay: 0
+                    actions: []
+                    icon.source: ""
+                    inputMethodHints: Qt.ImhHiddenText
+                        | Qt.ImhSensitiveData
+                        | Qt.ImhNoPredictiveText
+                        | Qt.ImhNoAutoUppercase
+                    placeholderText: auth.processing ? "" : qsTr("Enter password")
+                    passwordCharacter: "●"
+                    selectByMouse: false
                     KeyNavigation.tab: cancelButton
                     KeyNavigation.backtab: cancelButton
+                    Maui.Controls.status: auth.error !== ""
+                        ? Maui.Controls.Negative : 0
                     Keys.onEscapePressed: function(event) {
                         root.cancelLoginPrompt()
                         event.accepted = true
@@ -561,9 +588,6 @@ Window {
                         }
                     }
 
-                    palette.highlight: Maui.Theme.highlightColor
-                    palette.highlightedText: Maui.Theme.highlightedTextColor
-
                     SequentialAnimation {
                         id: errorAnimation
                         NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 10; duration: 50 }
@@ -572,18 +596,33 @@ Window {
                     }
                 }
 
-                Label {
-                    Layout.fillWidth: true; text: auth.error; color: Maui.Theme.negativeTextColor
-                    visible: auth.error !== ""; font.pixelSize: Maui.Style.fontSizes.small; horizontalAlignment: Text.AlignHCenter
+                Maui.IconLabel {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.maximumWidth: parent.width
+                    display: ToolButton.TextOnly
+                    spacing: 0
+                    visible: auth.error !== ""
+                    text: auth.error
+                    color: Maui.Theme.negativeTextColor
+                    alignment: Text.AlignHCenter
+                    label.wrapMode: Text.Wrap
                 }
 
                 Button {
                     id: cancelButton
-                    Layout.alignment: Qt.AlignHCenter; text: "Cancel"
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: 100
+                    Layout.preferredHeight: Maui.Style.rowHeight
+                    enabled: !auth.processing
+                    activeFocusOnTab: true
+                    text: qsTr("Cancel")
                     KeyNavigation.up: passwordField
                     KeyNavigation.tab: passwordField
                     KeyNavigation.backtab: passwordField
-                    Keys.onEscapePressed: root.cancelLoginPrompt()
+                    Keys.onEscapePressed: function(event) {
+                        root.cancelLoginPrompt()
+                        event.accepted = true
+                    }
                     onClicked: root.cancelLoginPrompt()
                 }
             }
@@ -594,11 +633,13 @@ Window {
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Maui.Style.space.small 
-        width: buttonRow.width + (Maui.Style.space.big * 2)
-        height: 60 
-        
-        color: Maui.Theme.backgroundColor
+        anchors.bottomMargin: Maui.Style.space.medium
+        width: buttonRow.width + (Maui.Style.space.medium * 2)
+        height: buttonRow.height + (Maui.Style.space.medium * 2)
+        color: Qt.alpha(Maui.Theme.backgroundColor, 0.88)
+        radius: Maui.Style.radiusV + 6
+        border.color: Qt.alpha(Maui.Theme.textColor, 0.14)
+        border.width: 1
         z: 10
 
         RowLayout {
@@ -608,6 +649,18 @@ Window {
 
             Button {
                 id: suspendButton
+                implicitWidth: 48
+                implicitHeight: 48
+                icon.width: 40
+                icon.height: 40
+                padding: 0
+                hoverEnabled: true
+                scale: hovered ? 1.12 : 1.0
+                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                background: Rectangle {
+                    radius: Maui.Style.radiusV
+                    color: suspendButton.activeFocus ? Qt.alpha(Maui.Theme.highlightColor, 0.18) : suspendButton.hovered ? Qt.alpha(Maui.Theme.textColor, 0.08) : "transparent"
+                }
                 icon.name: "system-suspend"
                 display: AbstractButton.IconOnly
                 visible: power.canSuspend()
@@ -619,6 +672,18 @@ Window {
 
             Button {
                 id: hibernateButton
+                implicitWidth: 48
+                implicitHeight: 48
+                icon.width: 40
+                icon.height: 40
+                padding: 0
+                hoverEnabled: true
+                scale: hovered ? 1.12 : 1.0
+                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                background: Rectangle {
+                    radius: Maui.Style.radiusV
+                    color: hibernateButton.activeFocus ? Qt.alpha(Maui.Theme.highlightColor, 0.18) : hibernateButton.hovered ? Qt.alpha(Maui.Theme.textColor, 0.08) : "transparent"
+                }
                 icon.name: "system-suspend-hibernate"
                 display: AbstractButton.IconOnly
                 visible: power.canHibernate()
@@ -630,6 +695,18 @@ Window {
 
             Button {
                 id: hybridSleepButton
+                implicitWidth: 48
+                implicitHeight: 48
+                icon.width: 40
+                icon.height: 40
+                padding: 0
+                hoverEnabled: true
+                scale: hovered ? 1.12 : 1.0
+                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                background: Rectangle {
+                    radius: Maui.Style.radiusV
+                    color: hybridSleepButton.activeFocus ? Qt.alpha(Maui.Theme.highlightColor, 0.18) : hybridSleepButton.hovered ? Qt.alpha(Maui.Theme.textColor, 0.08) : "transparent"
+                }
                 icon.name: "system-suspend-hibernate"
                 display: AbstractButton.IconOnly
                 visible: power.canHybridSleep()
@@ -641,6 +718,18 @@ Window {
 
             Button {
                 id: suspendThenHibernateButton
+                implicitWidth: 48
+                implicitHeight: 48
+                icon.width: 40
+                icon.height: 40
+                padding: 0
+                hoverEnabled: true
+                scale: hovered ? 1.12 : 1.0
+                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                background: Rectangle {
+                    radius: Maui.Style.radiusV
+                    color: suspendThenHibernateButton.activeFocus ? Qt.alpha(Maui.Theme.highlightColor, 0.18) : suspendThenHibernateButton.hovered ? Qt.alpha(Maui.Theme.textColor, 0.08) : "transparent"
+                }
                 icon.name: "system-suspend-hibernate"
                 display: AbstractButton.IconOnly
                 visible: power.canSuspendThenHibernate()
@@ -652,6 +741,18 @@ Window {
 
             Button {
                 id: rebootButton
+                implicitWidth: 48
+                implicitHeight: 48
+                icon.width: 40
+                icon.height: 40
+                padding: 0
+                hoverEnabled: true
+                scale: hovered ? 1.12 : 1.0
+                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                background: Rectangle {
+                    radius: Maui.Style.radiusV
+                    color: rebootButton.activeFocus ? Qt.alpha(Maui.Theme.highlightColor, 0.18) : rebootButton.hovered ? Qt.alpha(Maui.Theme.textColor, 0.08) : "transparent"
+                }
                 icon.name: "system-reboot"
                 display: AbstractButton.IconOnly
                 visible: power.canReboot()
@@ -663,6 +764,18 @@ Window {
 
             Button {
                 id: shutdownButton
+                implicitWidth: 48
+                implicitHeight: 48
+                icon.width: 40
+                icon.height: 40
+                padding: 0
+                hoverEnabled: true
+                scale: hovered ? 1.12 : 1.0
+                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                background: Rectangle {
+                    radius: Maui.Style.radiusV
+                    color: shutdownButton.activeFocus ? Qt.alpha(Maui.Theme.highlightColor, 0.18) : shutdownButton.hovered ? Qt.alpha(Maui.Theme.textColor, 0.08) : "transparent"
+                }
                 icon.name: "system-shutdown"
                 display: AbstractButton.IconOnly
                 visible: power.canPowerOff()

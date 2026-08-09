@@ -118,6 +118,7 @@ int main(int argc, char *argv[])
     bool overlayEnabled = true;
     double overlayOpacity = 0.76;
     QString iconMode = QStringLiteral("system");
+    bool lowercaseDate = false;
     // Load Configuration
     if (QFile::exists(configPath)) {
         QSettings config(configPath, QSettings::IniFormat);
@@ -134,6 +135,10 @@ int main(int argc, char *argv[])
 
         config.beginGroup("Debug");
         debugBattery = config.value("debugBattery", debugBattery).toBool();
+        config.endGroup();
+
+        config.beginGroup("Clock");
+        lowercaseDate = config.value("LowercaseDate", lowercaseDate).toBool();
         config.endGroup();
 
         config.beginGroup("Behavior");
@@ -156,6 +161,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("ConfigOverlayEnabled", overlayEnabled);
     engine.rootContext()->setContextProperty("ConfigOverlayOpacity", overlayOpacity);
     engine.rootContext()->setContextProperty("IconMode", iconMode);
+    engine.rootContext()->setContextProperty("ConfigLowercaseDate", lowercaseDate);
     engine.rootContext()->setContextProperty("userModel", &userModel);
     engine.rootContext()->setContextProperty("ConfigDefaultSession", defaultSession);
 
