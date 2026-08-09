@@ -102,7 +102,6 @@ sources += [
     'src/backend/SystemPower.cpp',
     'src/backend/SystemBattery.cpp',
     'src/backend/LayerShell.cpp',
-    'src/backend/ColorSchemeLoader.cpp',
 ]
 
 # Process MOC headers for Qt meta-object system
@@ -113,7 +112,6 @@ moc_headers = [
     'src/backend/SystemPower.h',
     'src/backend/SystemBattery.h',
     'src/backend/LayerShell.h',
-    'src/backend/ColorSchemeLoader.h',
 ]
 
 moc_files = qt_mod.preprocess(moc_headers: moc_headers)

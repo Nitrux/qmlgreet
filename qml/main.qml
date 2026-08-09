@@ -228,7 +228,7 @@ Window {
         Image {
             id: backgroundImage
             anchors.fill: parent
-            source: (ColorScheme.backgroundImage && ColorScheme.backgroundImage !== "") ? "file://" + ColorScheme.backgroundImage : ""
+            source: (ConfigBackgroundImage && ConfigBackgroundImage !== "") ? "file://" + ConfigBackgroundImage : ""
             fillMode: Image.PreserveAspectCrop
             visible: false; cache: false
         }
@@ -267,7 +267,7 @@ Window {
             font.weight: Font.DemiBold
             verticalAlignment: Text.AlignVCenter
         }
-        StyledComboBox {
+        ComboBox {
             id: userCombo
             Layout.preferredWidth: 200
             model: userModel
@@ -297,7 +297,7 @@ Window {
             font.weight: Font.DemiBold
             verticalAlignment: Text.AlignVCenter
         }
-        StyledComboBox {
+        ComboBox {
             id: sessionCombo
             Layout.preferredWidth: 240
             model: sessionModel
@@ -354,7 +354,6 @@ Window {
             Layout.alignment: Qt.AlignHCenter
             visible: battery.available
             color: Qt.rgba(0, 0, 0, 0.3)
-            radius: Math.min(ConfigBorderRadius, height / 2)
             implicitWidth: batteryRow.implicitWidth + 24
             implicitHeight: batteryRow.implicitHeight + 8
 
@@ -565,59 +564,6 @@ Window {
                     palette.highlight: Maui.Theme.highlightColor
                     palette.highlightedText: Maui.Theme.highlightedTextColor
 
-                    background: Rectangle {
-                        radius: Math.min(ConfigBorderRadius, height / 2)
-                        color: {
-                            if (passwordField.activeFocus) return ColorScheme.buttonBackground
-                            if (passwordFieldHover.containsMouse) return ColorScheme.buttonHover
-                            return ColorScheme.viewBackground
-                        }
-                        border.width: passwordField.activeFocus ? 1 : 1
-                        border.color: passwordField.activeFocus ? ColorScheme.buttonFocus : Qt.rgba(1, 1, 1, 0.08)
-
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
-                        Behavior on border.width { NumberAnimation { duration: 150 } }
-
-                        MouseArea {
-                            id: passwordFieldHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            propagateComposedEvents: true
-                            onPressed: mouse.accepted = false
-                        }
-                    }
-
-                    Component.onCompleted: {
-                        function styleButton(obj) {
-                            if (!obj || !obj.children) return
-                            for (var i = 0; i < obj.children.length; i++) {
-                                var child = obj.children[i]
-                                var childStr = child.toString()
-
-                                if (childStr.indexOf("ToolButton") !== -1 ||
-                                    childStr.indexOf("Button") !== -1) {
-
-                                    child.flat = true
-                                    child.hoverEnabled = false
-
-                                    if (child.background) {
-                                        child.background.visible = false
-                                    }
-
-                                    child.background = Qt.createQmlObject(
-                                        'import QtQuick; Rectangle { color: "transparent"; border.width: 0 }',
-                                        child
-                                    )
-                                }
-
-                                styleButton(child)
-                            }
-                        }
-
-                        styleButton(passwordField)
-                    }
-
                     SequentialAnimation {
                         id: errorAnimation
                         NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 10; duration: 50 }
@@ -631,13 +577,13 @@ Window {
                     visible: auth.error !== ""; font.pixelSize: Maui.Style.fontSizes.small; horizontalAlignment: Text.AlignHCenter
                 }
 
-                StyledButton {
+                Button {
                     id: cancelButton
                     Layout.alignment: Qt.AlignHCenter; text: "Cancel"
-                    keyNavTab: function() { passwordField.forceActiveFocus() }
-                    keyNavBacktab: function() { passwordField.forceActiveFocus() }
-                    keyNavUp: function() { passwordField.forceActiveFocus() }
-                    keyNavEscape: function() { root.cancelLoginPrompt() }
+                    KeyNavigation.up: passwordField
+                    KeyNavigation.tab: passwordField
+                    KeyNavigation.backtab: passwordField
+                    Keys.onEscapePressed: root.cancelLoginPrompt()
                     onClicked: root.cancelLoginPrompt()
                 }
             }
@@ -653,7 +599,6 @@ Window {
         height: 60 
         
         color: Maui.Theme.backgroundColor
-        radius: Math.min(ConfigBorderRadius, height / 2)
         z: 10
 
         RowLayout {
@@ -661,81 +606,69 @@ Window {
             anchors.centerIn: parent
             spacing: Maui.Style.space.small
 
-            StyledButton {
+            Button {
                 id: suspendButton
-                iconName: "system-suspend"
-                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
+                icon.name: "system-suspend"
+                display: AbstractButton.IconOnly
                 visible: power.canSuspend()
-                keyNavLeft: function() { root.movePowerFocus(suspendButton, -1, false) }
-                keyNavRight: function() { root.movePowerFocus(suspendButton, 1, false) }
-                keyNavUp: function() { root.focusLoginSelection() }
-                keyNavTab: function() { root.movePowerFocus(suspendButton, 1, true) }
-                keyNavBacktab: function() { root.movePowerFocus(suspendButton, -1, true) }
+                Keys.onLeftPressed: root.movePowerFocus(suspendButton, -1, false)
+                Keys.onRightPressed: root.movePowerFocus(suspendButton, 1, false)
+                Keys.onUpPressed: root.focusLoginSelection()
                 onClicked: power.suspend()
             }
 
-            StyledButton {
+            Button {
                 id: hibernateButton
-                iconName: "system-suspend-hibernate"
-                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
+                icon.name: "system-suspend-hibernate"
+                display: AbstractButton.IconOnly
                 visible: power.canHibernate()
-                keyNavLeft: function() { root.movePowerFocus(hibernateButton, -1, false) }
-                keyNavRight: function() { root.movePowerFocus(hibernateButton, 1, false) }
-                keyNavUp: function() { root.focusLoginSelection() }
-                keyNavTab: function() { root.movePowerFocus(hibernateButton, 1, true) }
-                keyNavBacktab: function() { root.movePowerFocus(hibernateButton, -1, true) }
+                Keys.onLeftPressed: root.movePowerFocus(hibernateButton, -1, false)
+                Keys.onRightPressed: root.movePowerFocus(hibernateButton, 1, false)
+                Keys.onUpPressed: root.focusLoginSelection()
                 onClicked: power.hibernate()
             }
 
-            StyledButton {
+            Button {
                 id: hybridSleepButton
-                iconName: "system-suspend-hibernate"
-                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
+                icon.name: "system-suspend-hibernate"
+                display: AbstractButton.IconOnly
                 visible: power.canHybridSleep()
-                keyNavLeft: function() { root.movePowerFocus(hybridSleepButton, -1, false) }
-                keyNavRight: function() { root.movePowerFocus(hybridSleepButton, 1, false) }
-                keyNavUp: function() { root.focusLoginSelection() }
-                keyNavTab: function() { root.movePowerFocus(hybridSleepButton, 1, true) }
-                keyNavBacktab: function() { root.movePowerFocus(hybridSleepButton, -1, true) }
+                Keys.onLeftPressed: root.movePowerFocus(hybridSleepButton, -1, false)
+                Keys.onRightPressed: root.movePowerFocus(hybridSleepButton, 1, false)
+                Keys.onUpPressed: root.focusLoginSelection()
                 onClicked: power.hybridSleep()
             }
 
-            StyledButton {
+            Button {
                 id: suspendThenHibernateButton
-                iconName: "system-suspend-hibernate"
-                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
+                icon.name: "system-suspend-hibernate"
+                display: AbstractButton.IconOnly
                 visible: power.canSuspendThenHibernate()
-                keyNavLeft: function() { root.movePowerFocus(suspendThenHibernateButton, -1, false) }
-                keyNavRight: function() { root.movePowerFocus(suspendThenHibernateButton, 1, false) }
-                keyNavUp: function() { root.focusLoginSelection() }
-                keyNavTab: function() { root.movePowerFocus(suspendThenHibernateButton, 1, true) }
-                keyNavBacktab: function() { root.movePowerFocus(suspendThenHibernateButton, -1, true) }
+                Keys.onLeftPressed: root.movePowerFocus(suspendThenHibernateButton, -1, false)
+                Keys.onRightPressed: root.movePowerFocus(suspendThenHibernateButton, 1, false)
+                Keys.onUpPressed: root.focusLoginSelection()
                 onClicked: power.suspendThenHibernate()
             }
 
-            StyledButton {
+            Button {
                 id: rebootButton
-                iconName: "system-reboot"
-                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
+                icon.name: "system-reboot"
+                display: AbstractButton.IconOnly
                 visible: power.canReboot()
-                keyNavLeft: function() { root.movePowerFocus(rebootButton, -1, false) }
-                keyNavRight: function() { root.movePowerFocus(rebootButton, 1, false) }
-                keyNavUp: function() { root.focusLoginSelection() }
-                keyNavTab: function() { root.movePowerFocus(rebootButton, 1, true) }
-                keyNavBacktab: function() { root.movePowerFocus(rebootButton, -1, true) }
+                Keys.onLeftPressed: root.movePowerFocus(rebootButton, -1, false)
+                Keys.onRightPressed: root.movePowerFocus(rebootButton, 1, false)
+                Keys.onUpPressed: root.focusLoginSelection()
                 onClicked: power.reboot()
             }
 
-            StyledButton {
+            Button {
                 id: shutdownButton
-                iconName: "system-shutdown"
-                cornerRadius: Math.max(0, ConfigBorderRadius - Maui.Style.space.small)
+                icon.name: "system-shutdown"
+                display: AbstractButton.IconOnly
                 visible: power.canPowerOff()
-                keyNavLeft: function() { root.movePowerFocus(shutdownButton, -1, false) }
-                keyNavRight: function() { root.movePowerFocus(shutdownButton, 1, false) }
-                keyNavUp: function() { root.focusLoginSelection() }
-                keyNavTab: function() { root.movePowerFocus(shutdownButton, 1, true) }
-                keyNavBacktab: function() { root.movePowerFocus(shutdownButton, -1, true) }
+                Keys.onLeftPressed: root.movePowerFocus(shutdownButton, -1, false)
+                Keys.onRightPressed: root.movePowerFocus(shutdownButton, 1, false)
+                Keys.onUpPressed: root.focusLoginSelection()
                 onClicked: power.powerOff()
             }
         }

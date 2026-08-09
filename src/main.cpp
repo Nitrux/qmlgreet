@@ -1,13 +1,10 @@
+#include <MauiKit4/Core/mauiapp.h>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QSettings>
 #include <QFile>
 #include <QCommandLineParser>
-#include <QPalette>
-#include <QQuickStyle>
-#include <QIcon>
-#include <QFont>
 #include <QTextStream>
 #include <QDateTime>
 #include <QtGlobal>
@@ -17,7 +14,6 @@
 #include "backend/UserModel.h"
 #include "backend/SystemPower.h"
 #include "backend/LayerShell.h"
-#include "backend/ColorSchemeLoader.h"
 #include "backend/SystemBattery.h"
 
 // Custom message handler to redirect Qt debug output to syslog and file
@@ -89,12 +85,8 @@ int main(int argc, char *argv[])
     qInfo() << "GREETD_SOCK environment variable:" << qgetenv("GREETD_SOCK");
     qInfo() << "Running as user:" << qgetenv("USER");
 
-    // Force Breeze style for Qt Quick Controls if not set via env
-    if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
-        QQuickStyle::setStyle("org.kde.desktop");
-    }
-
     QGuiApplication app(argc, argv);
+    MauiApp::instance();
     app.setApplicationName("qmlgreet");
     app.setApplicationVersion("1.0");
 
@@ -115,15 +107,9 @@ int main(int argc, char *argv[])
     qmlRegisterType<LayerShell>("QmlGreet", 1, 0, "LayerShell");
     qmlRegisterType<SystemBattery>("QmlGreet", 1, 0, "SystemBattery");
 
-    ColorSchemeLoader *colorScheme = new ColorSchemeLoader(&app);
-
     // Default Configuration
     QString configPath = parser.value(configOption);
-    QString colorSchemePath = "/usr/share/color-schemes/QMLGreetDefault.colors";
     QString backgroundImagePath;
-    QString iconTheme = "hicolor"; 
-    QString fontName = "Noto Sans";
-    int fontSize = 10;
     QString defaultSession = "";
     QString avatarImagePath = "";
     bool showAvatars = true;
@@ -132,19 +118,12 @@ int main(int argc, char *argv[])
     bool overlayEnabled = true;
     double overlayOpacity = 0.76;
     QString iconMode = QStringLiteral("system");
-    constexpr int defaultBorderRadius = 8;
-    int borderRadius = defaultBorderRadius;
-
     // Load Configuration
     if (QFile::exists(configPath)) {
         QSettings config(configPath, QSettings::IniFormat);
 
         config.beginGroup("Appearance");
-        colorSchemePath = config.value("ColorScheme", colorSchemePath).toString();
         backgroundImagePath = config.value("BackgroundImage", "").toString();
-        iconTheme = config.value("IconTheme", iconTheme).toString();
-        fontName = config.value("Font", fontName).toString();
-        fontSize = config.value("FontSize", fontSize).toInt();
         avatarImagePath = config.value("AvatarImage", avatarImagePath).toString();
         blurEnabled = config.value("BlurEnabled", blurEnabled).toBool();
         overlayEnabled = config.value("OverlayEnabled", overlayEnabled).toBool();
@@ -161,50 +140,16 @@ int main(int argc, char *argv[])
         showAvatars = config.value("ShowAvatars", showAvatars).toBool();
         config.endGroup();
 
-        config.beginGroup("Style");
-        bool borderRadiusOk = false;
-        const int configuredBorderRadius =
-            config.value("BorderRadius", defaultBorderRadius).toInt(&borderRadiusOk);
-        if (borderRadiusOk && configuredBorderRadius >= 0) {
-            borderRadius = configuredBorderRadius;
-        } else {
-            qWarning() << "Invalid BorderRadius in" << configPath
-                       << "- using default value" << defaultBorderRadius;
-        }
-        config.endGroup();
 
         // Read DefaultSession from root level (QSettings doesn't recognize [General] group)
         defaultSession = config.value("DefaultSession", "").toString();
     }
 
-    // Set font
-    if (!fontName.isEmpty()) {
-        QFont font(fontName);
-        if (fontSize > 0) font.setPointSize(fontSize);
-        app.setFont(font);
-    }
-
-    // Set icon theme
-    if (!iconTheme.isEmpty()) {
-        QIcon::setThemeName(iconTheme);
-    }
-
-    // Set color scheme
-    QPalette palette;
-    if (QFile::exists(colorSchemePath)) {
-        palette = colorScheme->loadColorScheme(colorSchemePath);
-        app.setPalette(palette);
-    }
-
     // Set background image
-    if (!backgroundImagePath.isEmpty() && QFile::exists(backgroundImagePath)) {
-        colorScheme->setBackgroundImage(backgroundImagePath);
-    }
-
     UserModel userModel(avatarImagePath, &app);
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("ColorScheme", colorScheme);
+    engine.rootContext()->setContextProperty("ConfigBackgroundImage", backgroundImagePath);
     engine.rootContext()->setContextProperty("ConfigShowAvatars", showAvatars);
     engine.rootContext()->setContextProperty("ConfigDebugBattery", debugBattery);
     engine.rootContext()->setContextProperty("ConfigBlurEnabled", blurEnabled);
@@ -213,7 +158,6 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("IconMode", iconMode);
     engine.rootContext()->setContextProperty("userModel", &userModel);
     engine.rootContext()->setContextProperty("ConfigDefaultSession", defaultSession);
-    engine.rootContext()->setContextProperty("ConfigBorderRadius", borderRadius);
 
     const QUrl url(QStringLiteral("qrc:/resources/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
