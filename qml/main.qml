@@ -363,18 +363,20 @@ Window {
             Layout.preferredHeight: 16
         }
 
-        Rectangle {
+        Maui.Chip {
             id: batteryLabel
             Layout.alignment: Qt.AlignHCenter
             visible: battery.available
+            enabled: false
+            hoverEnabled: false
             color: Qt.rgba(0, 0, 0, 0.3)
-            implicitWidth: batteryRow.implicitWidth + 24
-            implicitHeight: batteryRow.implicitHeight + 8
+            label.font.weight: Font.Medium
+            implicitWidth: batteryRow.implicitWidth + Maui.Style.space.medium * 2
+            implicitHeight: batteryRow.implicitHeight + Maui.Style.space.small * 2
 
-            RowLayout {
+            contentItem: RowLayout {
                 id: batteryRow
-                anchors.centerIn: parent
-                spacing: 6
+                spacing: Maui.Style.space.small
 
                 Maui.Icon {
                     Layout.preferredWidth: 16
@@ -396,9 +398,9 @@ Window {
                     visible: IconMode === "nerd"
                 }
 
-                Label {
+                Maui.IconLabel {
+                    display: ToolButton.TextOnly
                     text: battery.info
-                    color: Maui.Theme.textColor
                     font.weight: Font.Medium
                 }
             }
