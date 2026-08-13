@@ -2,7 +2,7 @@
 
 QML-based greeter for greetd and wlr-based compositors.
 
-![QMLGreet](https://nxos.org/wp-content/uploads/2026/01/screenshot-20260130-005834.png)
+![QMLGreet](https://nxos.org/wp-content/uploads/2026/08/screenshot-20260813-075754.png)
 > QMLGreet, a QML-based greeter.
 
 # Introduction
