@@ -11,7 +11,7 @@
 #include <QTextStream>
 #include <QDateTime>
 #include <QtGlobal>
-#include <KLocalizedContext>
+#include <KLocalizedQmlContext>
 #include <KLocalizedString>
 #include <syslog.h>
 #include "backend/AuthWrapper.h"
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
     UserModel userModel(avatarImagePath, &app);
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
+    engine.rootContext()->setContextObject(new KLocalizedQmlContext(&engine));
     engine.rootContext()->setContextProperty("ConfigBackgroundImage", backgroundImagePath);
     engine.rootContext()->setContextProperty("ConfigShowAvatars", showAvatars);
     engine.rootContext()->setContextProperty("ConfigDebugBattery", debugBattery);

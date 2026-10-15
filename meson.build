@@ -39,8 +39,15 @@ qt6_core5compat = dependency('Qt6Core5Compat', version: '>=6.9', required: true)
 # MauiKit4 library - required for QML plugin types to work
 # The QML plugin needs the main library to be loaded for type registration
 # Force link with --no-as-needed to ensure the library is loaded at runtime
-mauikit_dep = dependency('MauiKit4', version: '>=4.0.4', required: true)
-kf6_i18n_dep = dependency('KF6I18n', version: '>=6.0', required: true, include_type: 'system')
+mauikit_dep = dependency('MauiKit4', version: '>=4.0.5', required: true)
+cpp_compiler = meson.get_compiler('cpp')
+if cpp_compiler.has_argument('-Wno-sfinae-incomplete')
+	add_project_arguments('-Wno-sfinae-incomplete', language: 'cpp')
+endif
+kf6_i18n_dep = declare_dependency(
+    include_directories: include_directories(get_option('prefix') / 'include' / 'KF6' / 'KI18n'),
+    dependencies: [cpp_compiler.find_library('KF6I18n'), cpp_compiler.find_library('KF6I18nQml')],
+)
 mauikit_lib = declare_dependency(
     dependencies: mauikit_dep,
     link_args: ['-Wl,--no-as-needed']
