@@ -70,7 +70,7 @@ Priority: optional
 Architecture: $ARCHITECTURE
 Maintainer: $MAINTAINER
 Description: $DESCRIPTION
-Depends: greetd, libqt6core5compat6, libqt6core6t64, libqt6dbus6, libqt6gui6, libqt6opengl6, libqt6openglwidgets6, libqt6qml6, libqt6waylandclient6, libwayland-client0, libwayland-cursor0, libwayland-egl1, libwayland-server0, mauikit, qml6-module-qt5compat-graphicaleffects, qt6-wayland, wayland-protocols, wayland-scanner++
+Depends: greetd, libqt6core5compat6, libqt6core6t64, libqt6dbus6, libqt6gui6, libqt6opengl6, libqt6openglwidgets6, libqt6qml6, libqt6waylandclient6, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, libwayland-client0, libwayland-cursor0, libwayland-egl1, libwayland-server0, mauikit (>= 4.0.5), qml6-module-qt5compat-graphicaleffects, qt6-wayland, wayland-protocols, wayland-scanner++
 EOF
 
 
