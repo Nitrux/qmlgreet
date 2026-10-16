@@ -44,6 +44,9 @@ $APT_COMMAND install -y --no-install-recommends \
     pkg-config \
     qt6-5compat-dev \
     qt6-base-dev \
+    qt6-multimedia-dev \
+    libxcb-icccm4-dev \
+    libxcb-shape0-dev \
     qt6-base-private-dev \
     qt6-declarative-dev \
     qt6-declarative-dev-tools \
