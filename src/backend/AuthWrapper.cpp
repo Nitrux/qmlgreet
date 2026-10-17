@@ -35,9 +35,9 @@ void AuthWrapper::login(const QString &username)
     }
 
     m_processing = true;
-    emit processingChanged();
+    Q_EMIT processingChanged();
     m_error = "";
-    emit errorChanged();
+    Q_EMIT errorChanged();
 
     QString socketPath = qgetenv("GREETD_SOCK");
     qDebug() << "AuthWrapper: GREETD_SOCK =" << socketPath;
@@ -54,9 +54,9 @@ void AuthWrapper::login(const QString &username)
         m_socket->connectToServer(socketPath);
         if (!m_socket->waitForConnected(1000)) {
             m_error = "Could not connect to greetd socket.";
-            emit errorChanged();
+            Q_EMIT errorChanged();
             m_processing = false;
-            emit processingChanged();
+            Q_EMIT processingChanged();
             return;
         }
         qDebug() << "AuthWrapper: Connected to greetd socket";
@@ -82,12 +82,12 @@ void AuthWrapper::respond(const QString &response)
     if (m_prompt.isEmpty()) {
         qWarning() << "AuthWrapper: Cannot respond - no active prompt (session may have expired or been cancelled)";
         m_error = "No active authentication prompt. Please try logging in again.";
-        emit errorChanged();
+        Q_EMIT errorChanged();
         return;
     }
 
     m_processing = true;
-    emit processingChanged();
+    Q_EMIT processingChanged();
 
     if (m_isMock) {
         runMockResponse(response);
@@ -120,16 +120,16 @@ void AuthWrapper::startSession(const QString &cmd)
 {
     m_processing = true;
     m_sessionStarting = true;
-    emit processingChanged();
+    Q_EMIT processingChanged();
 
     // Safety check for empty commands
     if (cmd.trimmed().isEmpty()) {
         qWarning() << "AuthWrapper: startSession called with empty command!";
         m_error = "Internal Error: No session command provided.";
-        emit errorChanged();
+        Q_EMIT errorChanged();
         m_processing = false;
         m_sessionStarting = false;
-        emit processingChanged();
+        Q_EMIT processingChanged();
         return;
     }
 
@@ -185,8 +185,8 @@ void AuthWrapper::runMockLogin(const QString &username)
         m_isSecret = true;
         m_processing = false;
         
-        emit promptChanged();
-        emit processingChanged();
+        Q_EMIT promptChanged();
+        Q_EMIT processingChanged();
     });
 }
 
@@ -197,16 +197,16 @@ void AuthWrapper::runMockResponse(const QString &response)
         if (response == "fail") {
              qDebug() << "Mock: Authentication failed";
              m_error = "Mock Error: Invalid credentials (you typed 'fail')";
-             emit errorChanged();
+             Q_EMIT errorChanged();
              
              // Reset UI to allow retry
              m_processing = false;
-             emit processingChanged();
+             Q_EMIT processingChanged();
         } else {
              qDebug() << "Mock: Authentication successful";
              m_processing = false;
-             emit processingChanged();
-             emit loginSucceeded();
+             Q_EMIT processingChanged();
+             Q_EMIT loginSucceeded();
         }
     });
 }
@@ -275,8 +275,8 @@ void AuthWrapper::processMessage(const QJsonObject &json)
                 m_socket->disconnectFromServer();
             }
 
-            emit processingChanged();
-            emit promptChanged();
+            Q_EMIT processingChanged();
+            Q_EMIT promptChanged();
             // Don't emit loginSucceeded - the error was already set
             return;
         }
@@ -289,8 +289,8 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         } else {
             qDebug() << "AuthWrapper: Authentication successful, emitting loginSucceeded signal";
             m_processing = false;
-            emit processingChanged();
-            emit loginSucceeded();
+            Q_EMIT processingChanged();
+            Q_EMIT loginSucceeded();
         }
     }
     else if (type == "auth_message") {
@@ -306,12 +306,12 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         else if (msgType == "error") {
             qWarning() << "Auth error message:" << m_prompt;
             m_error = m_prompt;
-            emit errorChanged();
+            Q_EMIT errorChanged();
         }
 
         m_processing = false;
-        emit promptChanged();
-        emit processingChanged();
+        Q_EMIT promptChanged();
+        Q_EMIT processingChanged();
     }
     else if (type == "error") {
         QString errorType = json["error_type"].toString();
@@ -330,8 +330,8 @@ void AuthWrapper::processMessage(const QJsonObject &json)
 
         m_processing = false;
         m_sessionStarting = false;
-        emit errorChanged();
-        emit processingChanged();
+        Q_EMIT errorChanged();
+        Q_EMIT processingChanged();
 
         // Cancel the session on error and reset for retry
         if (m_socket->state() == QLocalSocket::ConnectedState) {
@@ -343,7 +343,7 @@ void AuthWrapper::processMessage(const QJsonObject &json)
             // Socket already closed, just reset to allow retry
             m_canceling = false;
             m_prompt = "";
-            emit promptChanged();
+            Q_EMIT promptChanged();
         }
     }
 }
@@ -353,9 +353,9 @@ void AuthWrapper::onSocketError(QLocalSocket::LocalSocketError)
     if (m_isMock) return; // Ignore socket errors in mock mode
 
     m_error = "Socket Error: " + m_socket->errorString();
-    emit errorChanged();
+    Q_EMIT errorChanged();
     m_processing = false;
-    emit processingChanged();
+    Q_EMIT processingChanged();
     reset();
 }
 
@@ -371,8 +371,8 @@ void AuthWrapper::reset()
     m_buffer.clear();
     m_isMock = false;
 
-    emit promptChanged();
-    emit processingChanged();
+    Q_EMIT promptChanged();
+    Q_EMIT processingChanged();
 }
 
 QStringList AuthWrapper::prepareEnv()

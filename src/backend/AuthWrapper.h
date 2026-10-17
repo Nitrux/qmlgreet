@@ -36,7 +36,7 @@ public:
     void setError(const QString &error) {
         if (m_error != error) {
             m_error = error;
-            emit errorChanged();
+            Q_EMIT errorChanged();
         }
     }
 
@@ -64,7 +64,7 @@ public:
      */
     Q_INVOKABLE void startSession(const QString &cmd);
 
-signals:
+Q_SIGNALS:
     void promptChanged();
     void errorChanged();
     void processingChanged();
@@ -73,7 +73,7 @@ signals:
     // The UI should listen for this and then call startSession().
     void loginSucceeded();
 
-private slots:
+private Q_SLOTS:
     void onReadyRead();
     void onSocketError(QLocalSocket::LocalSocketError socketError);
 

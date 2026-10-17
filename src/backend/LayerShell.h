@@ -24,7 +24,7 @@ public:
     // Call this to activate the shell logic
     Q_INVOKABLE void activate();
 
-signals:
+Q_SIGNALS:
     void windowChanged();
 
 public:

@@ -6,7 +6,7 @@
 
 # -- Exit on errors.
 
-set -e
+set -euo pipefail
 
 
 # -- Check if running as root.
@@ -37,9 +37,8 @@ $APT_COMMAND install -y --no-install-recommends \
     gnupg2 \
     libkf6i18n-dev \
     libwayland-dev \
+    wayland-protocols \
     lintian \
-    meson \
-    ninja-build \
     nlohmann-json3-dev \
     pkg-config \
     qt6-5compat-dev \

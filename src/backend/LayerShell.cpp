@@ -37,7 +37,7 @@ QWindow* LayerShell::window() const { return m_window; }
 void LayerShell::setWindow(QWindow *window) {
     if (m_window != window) {
         m_window = window;
-        emit windowChanged();
+        Q_EMIT windowChanged();
     }
 }
 

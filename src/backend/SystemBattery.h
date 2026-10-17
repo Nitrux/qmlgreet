@@ -22,12 +22,12 @@ public:
     bool debugBattery() const { return m_debugBattery; }
     void setDebugBattery(bool debugBattery);
 
-signals:
+Q_SIGNALS:
     void infoChanged();
     void availableChanged();
     void debugBatteryChanged();
 
-private slots:
+private Q_SLOTS:
     void refresh();
 
 private:

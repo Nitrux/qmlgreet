@@ -23,7 +23,7 @@ void SystemBattery::setDebugBattery(bool debugBattery)
     m_debugBattery = debugBattery;
     m_debugState = 0;
     m_timer->setInterval(m_debugBattery ? 2000 : 10000);
-    emit debugBatteryChanged();
+    Q_EMIT debugBatteryChanged();
     refresh();
 }
 
@@ -50,9 +50,9 @@ void SystemBattery::refresh()
         m_debugState = (m_debugState + 1) % 10;
 
         if (!wasAvailable) {
-            emit availableChanged();
+            Q_EMIT availableChanged();
         }
-        emit infoChanged();
+        Q_EMIT infoChanged();
         return;
     }
 
@@ -76,11 +76,11 @@ void SystemBattery::refresh()
     if (batteryPath.isEmpty()) {
         if (!m_info.isEmpty()) {
             m_info.clear();
-            emit infoChanged();
+            Q_EMIT infoChanged();
         }
         if (m_available) {
             m_available = false;
-            emit availableChanged();
+            Q_EMIT availableChanged();
         }
         return;
     }
@@ -113,11 +113,11 @@ void SystemBattery::refresh()
     if (m_info != newInfo || m_iconName != newIconName) {
         m_info = newInfo;
         m_iconName = newIconName;
-        emit infoChanged();
+        Q_EMIT infoChanged();
     }
 
     if (!m_available) {
         m_available = true;
-        emit availableChanged();
+        Q_EMIT availableChanged();
     }
 }
