@@ -17,6 +17,7 @@ QMLGreet runs natively on Wayland compositors (such as Hyprland or Sway) using t
 ## Features
 
 - Wayland-native: Integrates seamlessly with wlroots-based compositors via the `wlr-layer-shell-unstable-v1` protocol.
+- Authentication supports password or PIN entry through an on-screen numeric keypad and displays informational fingerprint prompts from greetd.
 - Configurable: 
     * Customize the look and feel via `/etc/qmlgreet/qmlgreet.conf`.
     * Supports standard `.colors` schemes (KDE style).
@@ -33,6 +34,9 @@ QMLGreet runs natively on Wayland compositors (such as Hyprland or Sway) using t
 - Performance:
     * Optimized C++ backend.
     * Built with `x86-64-v3` optimizations for modern hardware.
+
+> [!NOTE]
+> PIN acceptance and fingerprint authentication depend on the PAM modules configured for greetd. Fingerprint authentication can use `pam_fprintd`, which is backed by libfprint.
 
 ### Runtime Requirements
 

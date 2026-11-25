@@ -67,6 +67,9 @@ foreach(protocol IN LISTS WAYLAND_PROTOCOL_FILES)
     list(APPEND WAYLAND_PROTOCOL_HEADERS "${protocol_header}")
 endforeach()
 
+set_source_files_properties(${WAYLAND_PROTOCOL_SOURCES}
+    PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
 add_executable(qmlgreet
     src/main.cpp
     src/backend/AuthWrapper.cpp

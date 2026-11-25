@@ -79,7 +79,7 @@ void AuthWrapper::respond(const QString &response)
         return;
     }
 
-    if (m_prompt.isEmpty()) {
+    if (!m_requiresInput) {
         qWarning() << "AuthWrapper: Cannot respond - no active prompt (session may have expired or been cancelled)";
         m_error = "No active authentication prompt. Please try logging in again.";
         Q_EMIT errorChanged();
@@ -103,6 +103,8 @@ void AuthWrapper::respond(const QString &response)
 
 void AuthWrapper::cancel()
 {
+    if (m_canceling || m_processing)
+        return;
     if (m_isMock) {
         reset();
         return;
@@ -111,7 +113,14 @@ void AuthWrapper::cancel()
     if (m_socket->state() == QLocalSocket::ConnectedState) {
         QJsonObject json;
         json["type"] = "cancel_session";
+        m_canceling = true;
+        m_processing = true;
+        m_requiresInput = false;
+        m_prompt.clear();
+        Q_EMIT processingChanged();
+        Q_EMIT promptChanged();
         sendCommand(json);
+        return;
     }
     reset();
 }
@@ -183,6 +192,7 @@ void AuthWrapper::runMockLogin(const QString &username)
         qDebug() << "Mock: Asking for password for" << username;
         m_prompt = "Mock Password (type 'fail' to error):";
         m_isSecret = true;
+        m_requiresInput = true;
         m_processing = false;
         
         Q_EMIT promptChanged();
@@ -270,6 +280,9 @@ void AuthWrapper::processMessage(const QJsonObject &json)
             m_processing = false;
             m_prompt = "";
 
+            m_requiresInput = false;
+            m_isSecret = false;
+
             // Close and reset the socket to allow fresh login attempts
             if (m_socket->state() == QLocalSocket::ConnectedState) {
                 m_socket->disconnectFromServer();
@@ -297,19 +310,12 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         QString msgType = json["auth_message_type"].toString();
         m_prompt = json["auth_message"].toString();
         m_isSecret = (msgType == "secret");
+        m_requiresInput = m_isSecret || msgType == "visible";
 
-        // Handle info and error message types
-        if (msgType == "info") {
-            qDebug() << "Auth info:" << m_prompt;
-            // Still allow continuation for info messages
+        m_processing = !m_requiresInput;
+        if (m_processing) {
+            sendCommand({{"type", "post_auth_message_response"}});
         }
-        else if (msgType == "error") {
-            qWarning() << "Auth error message:" << m_prompt;
-            m_error = m_prompt;
-            Q_EMIT errorChanged();
-        }
-
-        m_processing = false;
         Q_EMIT promptChanged();
         Q_EMIT processingChanged();
     }
@@ -319,7 +325,7 @@ void AuthWrapper::processMessage(const QJsonObject &json)
 
         // Provide user-friendly error messages
         if (errorType == "auth_error") {
-            m_error = "Incorrect password. Please try again.";
+            m_error = "Authentication failed. Please try again.";
         } else if (description.contains("Connection refused") || description.contains("os error 111")) {
             m_error = "Session error. Please try logging in again.";
         } else {
@@ -333,9 +339,16 @@ void AuthWrapper::processMessage(const QJsonObject &json)
         Q_EMIT errorChanged();
         Q_EMIT processingChanged();
 
+        if (m_canceling) {
+            m_socket->abort();
+            reset();
+            return;
+        }
         // Cancel the session on error and reset for retry
         if (m_socket->state() == QLocalSocket::ConnectedState) {
             m_canceling = true;
+            m_processing = true;
+            Q_EMIT processingChanged();
             QJsonObject cancelJson;
             cancelJson["type"] = "cancel_session";
             sendCommand(cancelJson);
@@ -364,6 +377,7 @@ void AuthWrapper::reset()
     m_prompt = "";
     m_error = "";
     m_isSecret = false;
+    m_requiresInput = false;
     m_processing = false;
     m_sessionStarting = false;
     m_canceling = false;

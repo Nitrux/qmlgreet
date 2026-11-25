@@ -20,6 +20,7 @@ class AuthWrapper : public QObject
     // UI Properties
     Q_PROPERTY(QString currentPrompt READ currentPrompt NOTIFY promptChanged)
     Q_PROPERTY(bool isSecret READ isSecret NOTIFY promptChanged)
+    Q_PROPERTY(bool requiresInput READ requiresInput NOTIFY promptChanged)
     Q_PROPERTY(QString error READ error WRITE setError NOTIFY errorChanged)
     Q_PROPERTY(bool processing READ processing NOTIFY processingChanged)
 
@@ -29,6 +30,7 @@ public:
     // Property Getters
     QString currentPrompt() const { return m_prompt; }
     bool isSecret() const { return m_isSecret; }
+    bool requiresInput() const { return m_requiresInput; }
     QString error() const { return m_error; }
     bool processing() const { return m_processing; }
 
@@ -95,6 +97,7 @@ private:
     QString m_prompt;
     QString m_error;
     bool m_isSecret = false;
+    bool m_requiresInput = false;
     bool m_processing = false;
     bool m_isMock = false;
     bool m_sessionStarting = false;
