@@ -111,11 +111,22 @@ Window {
         var idx = userCombo.currentIndex
         if (idx >= 0) {
             var username = userModel.data(userModel.index(idx, 0), 257)
+            if (loginStack.attemptUser !== username) loginStack.attempts = 0
+            loginStack.attemptUser = username
+            loginStack.failure = ""
+            loginStack.credentialRejected = false
             auth.login(username)
         }
     }
 
+    function hasAuthenticationPrompt() {
+        return auth.currentPrompt.length > 0
+                && (auth.requiresInput || !/^(PIN authentication (is not configured|currently unavailable)|Prihlásenie PINom (nie je aktivované|momentálne nedostupné))$/.test(auth.currentPrompt.trim()))
+    }
+
     function cancelLoginPrompt() {
+        loginStack.failure = ""
+        loginStack.attempts = 0
         auth.cancel()
         loginStack.currentIndex = 0
     }
@@ -171,7 +182,8 @@ Window {
     AuthWrapper {
         id: auth
         onPromptChanged: {
-            if (auth.currentPrompt !== "") {
+            loginStack.verifying = false
+            if (root.hasAuthenticationPrompt()) {
                 passwordField.text = ""
                 loginStack.currentIndex = 1
                 if (auth.requiresInput)
@@ -179,6 +191,7 @@ Window {
             }
         }
         onLoginSucceeded: {
+            loginStack.verifying = false
             auth.error = ""
 
             // Ensure valid selection before launch
@@ -190,27 +203,25 @@ Window {
             if (idx >= 0) {
                 var cmd = sessionModel.execCommand(idx)
                 console.log("Launching session:", cmd)
+                loginStack.loggingIn = true
+                loginStack.currentIndex = 1
                 auth.startSession(cmd)
             } else {
                 auth.error = "No session selected"
             }
         }
+        onAuthenticationFailed: {
+            loginStack.attempts++
+            loginStack.credentialRejected = true
+        }
         onErrorChanged: {
             if (auth.error !== "") {
-                errorAnimation.start()
-                // Show error message for 2 seconds before resetting to avatar view
-                errorResetTimer.start()
+                loginStack.verifying = false
+                loginStack.loggingIn = false
+                loginStack.failure = auth.error
+                loginStack.currentIndex = 1
+                Qt.callLater(() => retryButton.forceActiveFocus())
             }
-        }
-    }
-
-    // Timer to reset view after showing error message
-    Timer {
-        id: errorResetTimer
-        interval: 2000
-        repeat: false
-        onTriggered: {
-            loginStack.currentIndex = 0
         }
     }
 
@@ -411,6 +422,12 @@ Window {
     // --- User and Password ---
     StackLayout {
         id: loginStack
+        property int attempts: 0
+        property string attemptUser: ""
+        property string failure: ""
+        property bool credentialRejected: false
+        property bool loggingIn: false
+        property bool verifying: false
         anchors.centerIn: parent
         width: parent.width
         height: parent.height
@@ -546,9 +563,28 @@ Window {
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             ColumnLayout {
+                anchors.centerIn: parent
+                id: loginStatus
+                visible: loginStack.loggingIn || loginStack.verifying
+                spacing: Maui.Style.space.small
+                width: authenticationView.width
+                Maui.SectionHeader {
+                    Layout.fillWidth: true
+                    text1: loginStack.loggingIn ? qsTr("Logging In") : qsTr("Verifying Credentials")
+                    text2: loginStack.loggingIn ? qsTr("Starting your session.") : qsTr("Checking your sign-in details.")
+                }
+                ProgressBar {
+                    Layout.fillWidth: true
+                    indeterminate: loginStatus.visible
+                }
+            }
+
+            ColumnLayout {
                 id: authenticationView
                 anchors.centerIn: parent
                 width: Math.min(parent.width - Maui.Style.space.big * 2, 400)
+                visible: !loginStatus.visible && (hasPrompt || loginStack.failure.length > 0)
+                readonly property bool hasPrompt: !loginStack.failure && root.hasAuthenticationPrompt()
                 spacing: Maui.Style.space.medium
 
                 readonly property string step: !visible || !auth.currentPrompt ? ""
@@ -566,11 +602,12 @@ Window {
                 }
 
                 Maui.SectionHeader {
+                    visible: authenticationView.hasPrompt
                     Layout.fillWidth: true
                     readonly property bool scanInstruction: !auth.requiresInput
                         && /^(please\s+)?(place|swipe|press|touch|scan)\b/i.test(auth.currentPrompt.trim())
                     text1: scanInstruction ? qsTr("Place your finger on the sensor")
-                        : auth.currentPrompt || qsTr("Password or PIN")
+                        : auth.currentPrompt
                     text2: auth.requiresInput
                         ? (pad.active ? qsTr("Enter your PIN") : qsTr("Enter your password"))
                         : scanInstruction ? "" : qsTr("Follow the authentication instructions")
@@ -580,7 +617,7 @@ Window {
                     id: passwordField
                     Layout.fillWidth: true
                     Layout.preferredHeight: Maui.Style.rowHeight
-                    visible: auth.requiresInput && !pad.active
+                    visible: authenticationView.hasPrompt && auth.requiresInput && !pad.active
                     enabled: !auth.processing
                     readOnly: auth.processing
                     echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
@@ -608,40 +645,47 @@ Window {
                     }
                     onAccepted: {
                         if (!auth.processing && auth.requiresInput) {
+                            loginStack.verifying = true
                             auth.respond(text)
                             clear()
                         }
                     }
 
-                    SequentialAnimation {
-                        id: errorAnimation
-                        NumberAnimation { target: passwordField; property: "x"; to: passwordField.x + 10; duration: 50 }
-                        NumberAnimation { target: passwordField; property: "x"; to: passwordField.x - 10; duration: 50 }
-                        NumberAnimation { target: passwordField; property: "x"; to: passwordField.x; duration: 50 }
-                    }
+
                 }
 
                 TextField {
+                    id: pinField
                     Layout.fillWidth: true
                     Layout.preferredHeight: Maui.Style.rowHeight
                     visible: pad.active
-                    readOnly: true
-                    focusPolicy: Qt.NoFocus
                     horizontalAlignment: TextInput.AlignHCenter
-                    text: "●".repeat(pad.digits.length)
+                    echoMode: TextInput.Password
+                    passwordMaskDelay: 0
+                    passwordCharacter: "●"
+                    inputMethodHints: Qt.ImhDigitsOnly | Qt.ImhHiddenText | Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
+                    validator: RegularExpressionValidator { regularExpression: /[0-9]+/ }
+                    readonly property bool canSubmit: visible && acceptableInput && auth.requiresInput && auth.isSecret && !auth.processing
+                    onAccepted: submitPin()
+                    function submitPin() {
+                        if (!canSubmit) return
+                        const answer = text
+                        clear()
+                        loginStack.verifying = true
+                        auth.respond(answer)
+                    }
                 }
 
                 GridLayout {
                     id: pad
-                    property string digits: ""
-                    readonly property bool active: auth.requiresInput && auth.isSecret
+                    readonly property bool active: authenticationView.hasPrompt && auth.requiresInput && auth.isSecret
                         && /\bpin\b/i.test(auth.currentPrompt)
                     visible: active
                     Layout.alignment: Qt.AlignHCenter
                     columns: 3
                     rowSpacing: Maui.Style.space.big
                     columnSpacing: rowSpacing
-                    onVisibleChanged: if (!visible) digits = ""
+                    onVisibleChanged: if (!visible) pinField.clear()
 
                     Repeater {
                         model: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓"]
@@ -653,49 +697,55 @@ Window {
                             text: modelData === "⌫" ? "" : modelData
                             Accessible.name: modelData === "✓" ? qsTr("Submit PIN")
                                 : modelData === "⌫" ? qsTr("Delete digit") : modelData
-                            enabled: modelData !== "✓" || (auth.requiresInput && auth.isSecret && !auth.processing && pad.digits.length > 0)
+                            enabled: modelData !== "✓" || pinField.canSubmit
                             onClicked: {
                                 if (modelData === "✓") {
-                                    auth.respond(pad.digits)
-                                    pad.digits = ""
+                                    pinField.submitPin()
                                 } else if (modelData === "⌫") {
-                                    pad.digits = pad.digits.slice(0, -1)
+                                    pinField.text = pinField.text.slice(0, -1)
                                 } else {
-                                    pad.digits += modelData
+                                    pinField.text += modelData
                                 }
                             }
                         }
                     }
                 }
 
-                Maui.IconLabel {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.maximumWidth: parent.width
-                    display: ToolButton.TextOnly
-                    spacing: 0
-                    visible: auth.error !== ""
-                    text: auth.error
-                    color: Maui.Theme.negativeTextColor
-                    alignment: Text.AlignHCenter
-                    label.wrapMode: Text.Wrap
+                Maui.SectionHeader {
+                    Layout.fillWidth: true
+                    visible: loginStack.failure.length > 0
+                    text1: loginStack.credentialRejected
+                        ? qsTr("Authentication Failed (%1)").arg(loginStack.attempts) : qsTr("Login Failed")
+                    text2: loginStack.credentialRejected
+                        ? qsTr("Try again or cancel to return to the login screen.") : loginStack.failure
                 }
 
-                Button {
-                    id: cancelButton
+                RowLayout {
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: 100
-                    Layout.preferredHeight: Maui.Style.rowHeight
-                    enabled: !auth.processing
-                    activeFocusOnTab: true
-                    text: qsTr("Cancel")
-                    KeyNavigation.up: passwordField
-                    KeyNavigation.tab: passwordField
-                    KeyNavigation.backtab: passwordField
-                    Keys.onEscapePressed: function(event) {
-                        root.cancelLoginPrompt()
-                        event.accepted = true
+                    spacing: Maui.Style.space.small
+                    Button {
+                        id: retryButton
+                        Layout.preferredWidth: Math.max(implicitWidth, cancelButton.implicitWidth)
+                        visible: loginStack.failure.length > 0
+                        enabled: !auth.processing
+                        text: qsTr("Try Again")
+                        onClicked: root.startSelectedUserLogin()
                     }
-                    onClicked: root.cancelLoginPrompt()
+                    Button {
+                        id: cancelButton
+                        Layout.preferredWidth: retryButton.visible ? Math.max(implicitWidth, retryButton.implicitWidth) : implicitWidth
+                        enabled: !auth.processing
+                        activeFocusOnTab: true
+                        text: qsTr("Cancel")
+                        KeyNavigation.up: passwordField
+                        KeyNavigation.tab: passwordField
+                        KeyNavigation.backtab: passwordField
+                        Keys.onEscapePressed: function(event) {
+                            root.cancelLoginPrompt()
+                            event.accepted = true
+                        }
+                        onClicked: root.cancelLoginPrompt()
+                    }
                 }
             }
         }

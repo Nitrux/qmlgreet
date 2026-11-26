@@ -230,6 +230,7 @@ void AuthWrapper::runMockResponse(const QString &response)
         }
         if (response == "fail") {
              qDebug() << "Mock: Authentication failed";
+             Q_EMIT authenticationFailed();
              m_error = "Mock Error: Invalid credentials (you typed 'fail')";
              Q_EMIT errorChanged();
              
@@ -349,6 +350,7 @@ void AuthWrapper::processMessage(const QJsonObject &json)
 
         // Provide user-friendly error messages
         if (errorType == "auth_error") {
+            Q_EMIT authenticationFailed();
             m_error = "Authentication failed. Please try again.";
         } else if (description.contains("Connection refused") || description.contains("os error 111")) {
             m_error = "Session error. Please try logging in again.";

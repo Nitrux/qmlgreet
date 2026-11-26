@@ -75,6 +75,7 @@ Q_SIGNALS:
     // Emitted when authentication is 100% complete.
     // The UI should listen for this and then call startSession().
     void loginSucceeded();
+    void authenticationFailed();
 
 private Q_SLOTS:
     void onReadyRead();
