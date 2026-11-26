@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Copyright 2026 Nitrux Latinoamericana S.C. <hello@nxos.org>
 
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusReply>
+#include <QDBusObjectPath>
 #include "AuthWrapper.h"
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -16,10 +20,26 @@
 #include <QDir>
 #include <QFileInfo>
 
+static bool fingerprintReaderAvailable()
+{
+    const auto request = QDBusMessage::createMethodCall(
+        QStringLiteral("net.reactivated.Fprint"), QStringLiteral("/net/reactivated/Fprint/Manager"),
+        QStringLiteral("net.reactivated.Fprint.Manager"), QStringLiteral("GetDefaultDevice"));
+    const QDBusReply<QDBusObjectPath> device = QDBusConnection::systemBus().call(request, QDBus::Block, 2000);
+    return device.isValid() && !device.value().path().isEmpty();
+}
+
 AuthWrapper::AuthWrapper(QObject *parent)
     : QObject(parent)
     , m_socket(new QLocalSocket(this))
 {
+    m_mockScan.setSingleShot(true);
+    connect(&m_mockScan, &QTimer::timeout, this, [this]() {
+        m_prompt = "Mock PIN (123456):";
+        m_isSecret = true;
+        m_requiresInput = true;
+        Q_EMIT promptChanged();
+    });
     connect(m_socket, &QLocalSocket::readyRead, this, &AuthWrapper::onReadyRead);
     connect(m_socket, &QLocalSocket::errorOccurred, this, &AuthWrapper::onSocketError);
 }
@@ -29,7 +49,7 @@ void AuthWrapper::login(const QString &username)
     qDebug() << "AuthWrapper: login() called with username:" << username;
 
     // Prevent multiple login requests (e.g. double clicks) from firing simultaneously.
-    if (m_processing) {
+    if (m_processing || m_mockScan.isActive()) {
         qWarning() << "AuthWrapper: Login request ignored - already processing.";
         return;
     }
@@ -45,7 +65,7 @@ void AuthWrapper::login(const QString &username)
     if (socketPath.isEmpty()) {
         qWarning() << "AuthWrapper: No GREETD_SOCK found. Switching to MOCK MODE.";
         m_isMock = true;
-        runMockLogin(username);
+        runMockLogin();
         return;
     }
 
@@ -185,25 +205,29 @@ void AuthWrapper::startSession(const QString &cmd)
     sendCommand(json);
 }
 
-void AuthWrapper::runMockLogin(const QString &username)
+void AuthWrapper::runMockLogin()
 {
-    // Simulate network delay of 500ms
-    QTimer::singleShot(500, this, [this, username]() {
-        qDebug() << "Mock: Asking for password for" << username;
-        m_prompt = "Mock Password (type 'fail' to error):";
-        m_isSecret = true;
-        m_requiresInput = true;
-        m_processing = false;
-        
-        Q_EMIT promptChanged();
-        Q_EMIT processingChanged();
-    });
+    const bool scan = fingerprintReaderAvailable();
+    m_prompt = scan ? QStringLiteral("Place your finger on the sensor") : QStringLiteral("Mock PIN (123456):");
+    m_isSecret = !scan;
+    m_requiresInput = !scan;
+    m_processing = false;
+    if (scan) m_mockScan.start(2500);
+    Q_EMIT promptChanged();
+    Q_EMIT processingChanged();
 }
 
 void AuthWrapper::runMockResponse(const QString &response)
 {
     // Simulate processing delay
     QTimer::singleShot(600, this, [this, response]() {
+        if (m_prompt.startsWith("Mock PIN") && response != "123456") {
+            m_prompt = "Mock Password (type 'fail' to error):";
+            m_processing = false;
+            Q_EMIT promptChanged();
+            Q_EMIT processingChanged();
+            return;
+        }
         if (response == "fail") {
              qDebug() << "Mock: Authentication failed";
              m_error = "Mock Error: Invalid credentials (you typed 'fail')";
@@ -374,6 +398,7 @@ void AuthWrapper::onSocketError(QLocalSocket::LocalSocketError)
 
 void AuthWrapper::reset()
 {
+    m_mockScan.stop();
     m_prompt = "";
     m_error = "";
     m_isSecret = false;

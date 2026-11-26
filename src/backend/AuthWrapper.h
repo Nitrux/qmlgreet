@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QObject>
+#include <QTimer>
 #include <QLocalSocket>
 #include <QJsonObject>
 #include <QByteArray>
@@ -88,7 +89,8 @@ private:
     QStringList prepareEnv();
 
     // Mock Helpers
-    void runMockLogin(const QString &username);
+    void runMockLogin();
+    QTimer m_mockScan;
     void runMockResponse(const QString &response);
 
     QLocalSocket *m_socket;

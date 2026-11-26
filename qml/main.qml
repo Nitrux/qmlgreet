@@ -120,19 +120,6 @@ Window {
         loginStack.currentIndex = 0
     }
 
-    function appendPinDigit(digit) {
-        if (auth.processing || !auth.isSecret) {
-            return
-        }
-        passwordField.text += digit
-        passwordField.forceActiveFocus()
-    }
-
-    function clearPinEntry() {
-        passwordField.clear()
-        passwordField.forceActiveFocus()
-    }
-
     function movePowerFocus(currentButton, step, allowExit) {
         var buttons = visiblePowerButtons()
 
@@ -559,23 +546,41 @@ Window {
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
             ColumnLayout {
+                id: authenticationView
                 anchors.centerIn: parent
                 width: Math.min(parent.width - Maui.Style.space.big * 2, 400)
                 spacing: Maui.Style.space.medium
 
+                readonly property string step: !visible || !auth.currentPrompt ? ""
+                    : !auth.requiresInput ? "instruction" : pad.active ? "pin" : "password"
+                onStepChanged: if (step) stepFade.restart()
+
+                NumberAnimation {
+                    id: stepFade
+                    target: authenticationView
+                    property: "opacity"
+                    from: 0
+                    to: 1
+                    duration: Maui.Style.units.longDuration
+                    easing.type: Easing.OutCubic
+                }
+
                 Maui.SectionHeader {
                     Layout.fillWidth: true
-                    text1: auth.currentPrompt || qsTr("Password or PIN")
+                    readonly property bool scanInstruction: !auth.requiresInput
+                        && /^(please\s+)?(place|swipe|press|touch|scan)\b/i.test(auth.currentPrompt.trim())
+                    text1: scanInstruction ? qsTr("Place your finger on the sensor")
+                        : auth.currentPrompt || qsTr("Password or PIN")
                     text2: auth.requiresInput
-                        ? qsTr("Enter your password or PIN to continue")
-                        : qsTr("Follow the authentication instructions")
+                        ? (pad.active ? qsTr("Enter your PIN") : qsTr("Enter your password"))
+                        : scanInstruction ? "" : qsTr("Follow the authentication instructions")
                 }
 
                 Maui.PasswordField {
                     id: passwordField
                     Layout.fillWidth: true
                     Layout.preferredHeight: Maui.Style.rowHeight
-                    visible: auth.requiresInput
+                    visible: auth.requiresInput && !pad.active
                     enabled: !auth.processing
                     readOnly: auth.processing
                     echoMode: auth.isSecret ? TextInput.Password : TextInput.Normal
@@ -616,50 +621,49 @@ Window {
                     }
                 }
 
-                GridLayout {
+                TextField {
                     Layout.fillWidth: true
+                    Layout.preferredHeight: Maui.Style.rowHeight
+                    visible: pad.active
+                    readOnly: true
+                    focusPolicy: Qt.NoFocus
+                    horizontalAlignment: TextInput.AlignHCenter
+                    text: "●".repeat(pad.digits.length)
+                }
+
+                GridLayout {
+                    id: pad
+                    property string digits: ""
+                    readonly property bool active: auth.requiresInput && auth.isSecret
+                        && /\bpin\b/i.test(auth.currentPrompt)
+                    visible: active
+                    Layout.alignment: Qt.AlignHCenter
                     columns: 3
-                    rowSpacing: Maui.Style.space.small
-                    columnSpacing: Maui.Style.space.small
-                    visible: auth.isSecret
+                    rowSpacing: Maui.Style.space.big
+                    columnSpacing: rowSpacing
+                    onVisibleChanged: if (!visible) digits = ""
 
                     Repeater {
-                        model: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
-
+                        model: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "✓"]
                         Button {
                             required property string modelData
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: Maui.Style.rowHeight
-                            enabled: !auth.processing
-                            text: modelData
-                            onClicked: root.appendPinDigit(modelData)
-                        }
-                    }
-
-                    Button {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: Maui.Style.rowHeight
-                        enabled: !auth.processing
-                        text: qsTr("Clear")
-                        onClicked: root.clearPinEntry()
-                    }
-
-                    Button {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: Maui.Style.rowHeight
-                        enabled: !auth.processing
-                        text: "0"
-                        onClicked: root.appendPinDigit("0")
-                    }
-
-                    Button {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: Maui.Style.rowHeight
-                        enabled: !auth.processing
-                        text: qsTr("Delete")
-                        onClicked: {
-                            passwordField.text = passwordField.text.slice(0, -1)
-                            passwordField.forceActiveFocus()
+                            Layout.preferredWidth: Maui.Style.rowHeight * 1.5
+                            Layout.preferredHeight: Maui.Style.rowHeight * 1.5
+                            icon.name: modelData === "⌫" ? "edit-clear" : ""
+                            text: modelData === "⌫" ? "" : modelData
+                            Accessible.name: modelData === "✓" ? qsTr("Submit PIN")
+                                : modelData === "⌫" ? qsTr("Delete digit") : modelData
+                            enabled: modelData !== "✓" || (auth.requiresInput && auth.isSecret && !auth.processing && pad.digits.length > 0)
+                            onClicked: {
+                                if (modelData === "✓") {
+                                    auth.respond(pad.digits)
+                                    pad.digits = ""
+                                } else if (modelData === "⌫") {
+                                    pad.digits = pad.digits.slice(0, -1)
+                                } else {
+                                    pad.digits += modelData
+                                }
+                            }
                         }
                     }
                 }
@@ -674,17 +678,6 @@ Window {
                     color: Maui.Theme.negativeTextColor
                     alignment: Text.AlignHCenter
                     label.wrapMode: Text.Wrap
-                }
-
-                Button {
-                    Layout.alignment: Qt.AlignHCenter
-                    visible: auth.requiresInput
-                    enabled: !auth.processing && passwordField.text.length > 0
-                    text: qsTr("Sign in")
-                    onClicked: {
-                        auth.respond(passwordField.text)
-                        passwordField.clear()
-                    }
                 }
 
                 Button {
