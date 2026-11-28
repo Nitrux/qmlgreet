@@ -622,11 +622,12 @@ Window {
                 }
 
                 Maui.SectionHeader {
+                    id: promptHeader
                     visible: authenticationView.hasPrompt
                     Layout.fillWidth: true
                     readonly property bool scanInstruction: !auth.requiresInput
                         && /^(please\s+)?(place|swipe|press|touch|scan)\b/i.test(auth.currentPrompt.trim())
-                    text1: scanInstruction ? qsTr("Place your finger on the sensor")
+                    text1: scanInstruction ? qsTr("Place your finger on the sensor.")
                         : auth.currentPrompt
                     text2: auth.requiresInput
                         ? (pad.active ? qsTr("Enter your PIN") : qsTr("Enter your password"))
@@ -728,6 +729,32 @@ Window {
                                     pinField.text += modelData
                                 }
                             }
+                        }
+                    }
+                }
+
+                Maui.Chip {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Maui.Style.space.small
+                    visible: promptHeader.visible && promptHeader.scanInstruction
+                    enabled: false
+                    hoverEnabled: false
+                    Maui.Theme.colorSet: Maui.Theme.Window
+                    color: Maui.Theme.highlightColor
+                    spacing: 0
+
+                    SequentialAnimation on opacity {
+                        running: promptHeader.visible && promptHeader.scanInstruction
+                        loops: Animation.Infinite
+                        NumberAnimation {
+                            from: 0.35
+                            to: 1
+                            duration: 450
+                        }
+                        NumberAnimation {
+                            from: 1
+                            to: 0.35
+                            duration: 450
                         }
                     }
                 }
