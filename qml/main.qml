@@ -11,7 +11,20 @@ Window {
     height: 1080
     visible: false
     flags: Qt.FramelessWindowHint
-    color: "transparent"
+    color: loginStack.loggingIn ? "black" : "transparent"
+    property real contentOpacity: 1
+
+    NumberAnimation {
+        id: loginFade
+        property string sessionCommand
+        target: root
+        property: "contentOpacity"
+        from: 1
+        to: 0
+        duration: 250
+        easing.type: Easing.InOutQuad
+        onFinished: auth.startSession(sessionCommand)
+    }
 
     LayerShell { id: layerShell; window: root }
 
@@ -79,7 +92,7 @@ Window {
 
     function focusLoginSelection() {
         if (loginStack.currentIndex === 1) {
-            passwordField.forceActiveFocus()
+            (pad.active ? pinField : passwordField).forceActiveFocus()
             return
         }
 
@@ -92,7 +105,7 @@ Window {
 
     function focusInitialControl() {
         if (loginStack.currentIndex === 1) {
-            passwordField.forceActiveFocus()
+            (pad.active ? pinField : passwordField).forceActiveFocus()
             return
         }
 
@@ -149,7 +162,7 @@ Window {
         if (nextIndex < 0 || nextIndex >= buttons.length) {
             if (allowExit) {
                 if (loginStack.currentIndex === 1) {
-                    passwordField.forceActiveFocus()
+                    (pad.active ? pinField : passwordField).forceActiveFocus()
                 } else if (step > 0) {
                     userCombo.forceActiveFocus()
                 } else {
@@ -187,7 +200,7 @@ Window {
                 passwordField.text = ""
                 loginStack.currentIndex = 1
                 if (auth.requiresInput)
-                    Qt.callLater(function() { passwordField.forceActiveFocus() })
+                    Qt.callLater(function() { (pad.active ? pinField : passwordField).forceActiveFocus() })
             }
         }
         onLoginSucceeded: {
@@ -205,7 +218,8 @@ Window {
                 console.log("Launching session:", cmd)
                 loginStack.loggingIn = true
                 loginStack.currentIndex = 1
-                auth.startSession(cmd)
+                loginFade.sessionCommand = cmd
+                loginFade.start()
             } else {
                 auth.error = "No session selected"
             }
@@ -217,6 +231,8 @@ Window {
         onErrorChanged: {
             if (auth.error !== "") {
                 loginStack.verifying = false
+                loginFade.stop()
+                root.contentOpacity = 1
                 loginStack.loggingIn = false
                 loginStack.failure = auth.error
                 loginStack.currentIndex = 1
@@ -234,6 +250,7 @@ Window {
 
     // --- Background ---
     Rectangle {
+        opacity: root.contentOpacity
         anchors.fill: parent
         color: Maui.Theme.backgroundColor
         z: 0
@@ -260,13 +277,14 @@ Window {
     }
     Rectangle {
         anchors.fill: parent; color: Maui.Theme.backgroundColor
-        opacity: ConfigOverlayOpacity; visible: ConfigOverlayEnabled; z: 1
+        opacity: ConfigOverlayOpacity * root.contentOpacity; visible: ConfigOverlayEnabled; z: 1
     }
 
     // --- Top Elements ---
     
     // Top Left: User
     RowLayout {
+        opacity: root.contentOpacity
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.margins: Maui.Style.space.big
@@ -297,6 +315,7 @@ Window {
 
     // Top Right: Session
     RowLayout {
+        opacity: root.contentOpacity
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: Maui.Style.space.big
@@ -327,6 +346,7 @@ Window {
 
     // Top Center: Clock and Battery
     ColumnLayout {
+        opacity: root.contentOpacity
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.topMargin: Math.max(48, parent.height * 0.08)
@@ -659,6 +679,7 @@ Window {
                     Layout.fillWidth: true
                     Layout.preferredHeight: Maui.Style.rowHeight
                     visible: pad.active
+                    onVisibleChanged: if (visible) forceActiveFocus()
                     horizontalAlignment: TextInput.AlignHCenter
                     echoMode: TextInput.Password
                     passwordMaskDelay: 0
@@ -753,6 +774,7 @@ Window {
 
     // --- Bottom Bar ---
     Rectangle {
+        opacity: root.contentOpacity
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Maui.Style.space.medium
