@@ -627,11 +627,14 @@ Window {
                     Layout.fillWidth: true
                     readonly property bool scanInstruction: !auth.requiresInput
                         && /^(please\s+)?(place|swipe|press|touch|scan)\b/i.test(auth.currentPrompt.trim())
-                    text1: scanInstruction ? qsTr("Place your finger on the sensor.")
+                    readonly property bool fingerprintMismatch: !auth.requiresInput
+                        && auth.currentPrompt.trim() === "Failed to match fingerprint"
+                    text1: fingerprintMismatch ? qsTr("Fingerprint did not match.")
+                        : scanInstruction ? qsTr("Place your finger on the sensor.")
                         : auth.currentPrompt
                     text2: auth.requiresInput
                         ? (pad.active ? qsTr("Enter your PIN") : qsTr("Enter your password"))
-                        : scanInstruction ? "" : qsTr("Follow the authentication instructions")
+                        : (scanInstruction || fingerprintMismatch) ? "" : qsTr("Follow the authentication instructions")
                 }
 
                 Maui.PasswordField {
